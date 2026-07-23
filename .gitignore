@@ -1,8 +1,9 @@
-@'
-# Internal/project data
+# Internal/project data (real Calcit exports must never be committed)
 data/*
 !data/.gitkeep
 !data/README.md
+# Test fixtures are non-confidential and must be tracked so a clean clone runs pytest.
+!data/fixtures/
 
 # Python
 __pycache__/
@@ -31,10 +32,11 @@ exports/
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-shm
+*.sqlite-wal
 
 # Editors and OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-'@ | Set-Content .gitignore

@@ -1,0 +1,70 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "Base",
+      "parameters": { "Linija": { "dataType": "String" } },
+      "tagType": "UdtType",
+      "tags": [
+        { "name": "A", "tagType": "AtomicTag" },
+        {
+          "name": "B",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[IO_VAL]urejeni/L{Linija}/B"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        }
+      ]
+    },
+    {
+      "name": "Child",
+      "typeId": "Base",
+      "tagType": "UdtType",
+      "tags": [
+        {
+          "name": "C",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[IO_VAL]urejeni/{Neznan}/C"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        },
+        {
+          "name": "D",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[EXTERNAL_PROV]nekaj/zunanja/pot"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        },
+        {
+          "name": "E",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[IO_VAL]urejeni/L{Linija/E"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        }
+      ]
+    },
+    { "name": "Orphan", "typeId": "NeobstojecParent", "tagType": "UdtType" },
+    { "name": "CycleA", "typeId": "CycleB", "tagType": "UdtType" },
+    { "name": "CycleB", "typeId": "CycleA", "tagType": "UdtType" },
+    {
+      "name": "Dup",
+      "tagType": "UdtType",
+      "tags": [ { "name": "X", "tagType": "AtomicTag" } ]
+    },
+    {
+      "name": "Dup",
+      "tagType": "UdtType",
+      "tags": [ { "name": "Y", "tagType": "AtomicTag" } ]
+    }
+  ]
+}

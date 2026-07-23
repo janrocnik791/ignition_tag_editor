@@ -1,0 +1,3 @@
+# Referencne CSV fixture so kodirane v CP1250 in vsebujejo natancno oblikovane
+# vrstice. Onemogoci EOL/text normalizacijo, da ostanejo bajtno identicne.
+tests/fixtures/reference/** -text

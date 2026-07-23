@@ -1,0 +1,28 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "SIE_VAL",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "dataType": "Float4",
+          "name": "T1",
+          "opcItemPath": "ns=1;s=[SIE_VAL]DB1,REAL0",
+          "opcServer": "Ignition OPC UA Server",
+          "tagType": "AtomicTag",
+          "valueSource": "opc"
+        },
+        {
+          "dataType": "Float4",
+          "name": "T2",
+          "opcItemPath": "ns=1;s=[SIE_VAL]DB1,REAL0",
+          "opcServer": "Ignition OPC UA Server",
+          "tagType": "AtomicTag",
+          "valueSource": "opc"
+        }
+      ]
+    }
+  ]
+}

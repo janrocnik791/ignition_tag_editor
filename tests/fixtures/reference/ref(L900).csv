@@ -1,0 +1,6 @@
+Stroj ID (Maximo);Stroj ID (nov);Stroj opis;Meritev (prefix);PV;SP;Opomba;Motorji (prefix);RUN;RDY;Opomba;Custom;Star tag;Nov tag;Opomba
+10;10;POLŽASTI TRANSPORTER;T;T10_PV;T10_SP;meritev;M;M10_RUN;M10_RDY;motor;START SEKVENCE;OLD_START;NEW_START;
+;;;NAVOR;M10_NAVOR;;;;;;;;;;
+;;;;;;;;;;;;;;
+Stroj ID (Maximo);Stroj ID (nov);Stroj opis;Meritev (prefix);PV;SP;Opomba;Motorji (prefix);RUN;RDY;Opomba;Custom;Star tag;Nov tag;Opomba
+11;11;MOTOR Š;;;;;M;M11_RUN;M11_RDY;;;;;

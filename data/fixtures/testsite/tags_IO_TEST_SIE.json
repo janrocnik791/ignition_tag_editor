@@ -1,0 +1,32 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "SIE_TEST",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "dataType": "Float4",
+          "documentation": "Meritev navora čžš (S)",
+          "name": "M_T001_NAVOR",
+          "opcItemPath": "ns=1;s=[SIE_TEST]DB1,REAL0",
+          "opcServer": "Ignition OPC UA Server",
+          "tagGroup": "imeTagGroup",
+          "tagType": "AtomicTag",
+          "valueSource": "opc",
+          "customUnknownProp": "ohrani_me"
+        },
+        {
+          "dataType": "Boolean",
+          "documentation": "Zastavica",
+          "name": "M_T002_FLAG",
+          "opcItemPath": "ns=1;s=[SIE_TEST]DB1,REAL0",
+          "opcServer": "Ignition OPC UA Server",
+          "tagType": "AtomicTag",
+          "valueSource": "opc"
+        }
+      ]
+    }
+  ]
+}

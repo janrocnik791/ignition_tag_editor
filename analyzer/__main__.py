@@ -1,14 +1,18 @@
-"""CLI vmesnik: build | search | stats | raw | validate | inspect-udt.
+"""CLI vmesnik.
+
+Phase 0 (tag indeks): build | search | stats | raw | validate | inspect-udt
+Phase 1 (referencni model): ref-build | ref-sources | ref-validate | ref-query
 
 Primeri:
     python -m analyzer build
     python -m analyzer search --field opcItemPath --value DB2318 --mode contains
     python -m analyzer stats
-    python -m analyzer raw --id 42
-    python -m analyzer validate
     python -m analyzer validate --severity error
-    python -m analyzer validate --code EMPTY_TYPE_ID
     python -m analyzer inspect-udt --type-id "Siemens/Meritev_alarm_SP"
+    python -m analyzer ref-build --mappings data/mappings --site stahovica
+    python -m analyzer ref-sources
+    python -m analyzer ref-validate
+    python -m analyzer ref-query --site stahovica --line L400 --tech 410
 """
 
 from __future__ import annotations
@@ -31,6 +35,9 @@ DEFAULT_RAW = os.path.join(_ROOT, "data", "raw")
 DEFAULT_DB = os.path.join(_ROOT, "data", "generated", "tag_index.sqlite")
 DEFAULT_RULES = os.path.join(_ROOT, "rules")
 DEFAULT_ANALYSIS = os.path.join(_ROOT, "data", "generated", "analysis")
+DEFAULT_MAPPINGS = os.path.join(_ROOT, "data", "mappings")
+DEFAULT_REF_DB = os.path.join(_ROOT, "data", "generated", "reference_index.sqlite")
+DEFAULT_REF_OUT = os.path.join(_ROOT, "data", "generated", "reference")
 
 
 def _connect_ro(db_path: str) -> sqlite3.Connection:
@@ -194,6 +201,89 @@ def cmd_inspect_udt(args: argparse.Namespace) -> None:
         conn.close()
 
 
+# ---- Faza 1: referencni model -----------------------------------------
+
+def cmd_ref_build(args: argparse.Namespace) -> None:
+    from .reference.importer import build_reference_index
+
+    summary = build_reference_index(
+        args.mappings, args.db, site=args.site, verbose=True
+    )
+    print(f"Uvozenih virov: {summary['sources']} -> {args.db}")
+    for r in summary["results"]:
+        print(f"  {os.path.basename(r['path'])}: {r['status']}")
+    print(f"Navzkriznih ugotovitev: {summary['cross_row_issues']}")
+
+
+def cmd_ref_sources(args: argparse.Namespace) -> None:
+    from .reference.query import list_sources
+
+    conn = _connect_ro(args.db)
+    try:
+        rows = list_sources(conn)
+    finally:
+        conn.close()
+    for s in rows:
+        print(f"  [{s['id']}] {s['filename']} ({s['profile_id']}) "
+              f"site={s['site']} line={s['line']}")
+        print(f"       sha256={s['sha256'][:16]}... rows={s['row_count']} "
+              f"groups={s['group_count']} members={s['member_count']} "
+              f"issues={s['issue_count']}")
+
+
+def cmd_ref_validate(args: argparse.Namespace) -> None:
+    import sqlite3
+
+    from .reference.reports import write_reference_reports
+    from .reference.validate import validate_reference
+
+    conn = sqlite3.connect(args.db)
+    try:
+        n = validate_reference(conn)
+        paths = write_reference_reports(conn, args.out)
+        counts = dict(conn.execute(
+            "SELECT severity, COUNT(*) FROM import_issues GROUP BY severity"
+        ).fetchall())
+    finally:
+        conn.close()
+    print("== Referencne ugotovitve po resnosti ==")
+    for sev in ("ERROR", "WARNING", "INFO"):
+        print(f"  {sev}: {counts.get(sev, 0)}")
+    print(f"Navzkriznih (na novo izracunanih): {n}")
+    print(f"Porocila: {paths['md']}\n          {paths['csv']}\n          {paths['json']}")
+
+
+def cmd_ref_query(args: argparse.Namespace) -> None:
+    from .reference.query import get_expected_state
+
+    conn = _connect_ro(args.db)
+    try:
+        res = get_expected_state(
+            conn, site=args.site, line=args.line, tech=args.tech,
+            group_type=args.group_type, member=args.member,
+        )
+    finally:
+        conn.close()
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+        return
+    print(f"== Pricakovano stanje: {res['site']}/{res['line']} "
+          f"({len(res['groups'])} sklopov) ==")
+    for g in res["groups"]:
+        pr = g["provenance"]
+        print(f"\nSklop {g['tech_number']} \"{g['description'] or ''}\" "
+              f"[{g['group_type']} prefix={g['prefix']}]  "
+              f"(vrstica {pr['row']}, {pr['file']})")
+        for m in g["members"]:
+            mp = m["provenance"]
+            print(f"    {m['member_key']:12s} = {m['expected_name']:24s} "
+                  f"(row {mp['row']} col \"{mp['col_header']}\")")
+    if res["line_tags"]:
+        print(f"\n== Linijski custom tagi ({len(res['line_tags'])}) ==")
+        for t in res["line_tags"]:
+            print(f"    {t['label'] or '':22s} {t['old_name']} -> {t['new_name']}")
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="analyzer", description=__doc__)
     p.add_argument("--db", default=DEFAULT_DB, help="pot do SQLite indeksa")
@@ -232,6 +322,32 @@ def main(argv=None) -> None:
     iu = sub.add_parser("inspect-udt", help="podroben pregled UDT tipa")
     iu.add_argument("--type-id", required=True, dest="type_id")
     iu.set_defaults(func=cmd_inspect_udt)
+
+    # --- Faza 1: referencni model ---
+    rb = sub.add_parser("ref-build", help="uvozi referencne CSV v locen indeks")
+    rb.add_argument("--mappings", default=DEFAULT_MAPPINGS, help="mapa z referencnimi CSV")
+    rb.add_argument("--db", default=DEFAULT_REF_DB, help="izhodni referencni indeks")
+    rb.add_argument("--site", default=None, help="lokacija virov (npr. stahovica)")
+    rb.set_defaults(func=cmd_ref_build)
+
+    rs = sub.add_parser("ref-sources", help="izpisi uvozene referencne vire")
+    rs.add_argument("--db", default=DEFAULT_REF_DB, help="referencni indeks")
+    rs.set_defaults(func=cmd_ref_sources)
+
+    rv = sub.add_parser("ref-validate", help="navzkrizne provere + porocila")
+    rv.add_argument("--db", default=DEFAULT_REF_DB, help="referencni indeks")
+    rv.add_argument("--out", default=DEFAULT_REF_OUT, help="izhodna mapa porocil")
+    rv.set_defaults(func=cmd_ref_validate)
+
+    rq = sub.add_parser("ref-query", help="poizvedba pricakovanega stanja")
+    rq.add_argument("--db", default=DEFAULT_REF_DB, help="referencni indeks")
+    rq.add_argument("--site", required=True)
+    rq.add_argument("--line", required=True)
+    rq.add_argument("--tech", default=None, help="tehnoloska stevilka (Stroj ID nov)")
+    rq.add_argument("--group-type", default=None, dest="group_type")
+    rq.add_argument("--member", default=None, help="tocno pricakovano ime clana")
+    rq.add_argument("--json", action="store_true")
+    rq.set_defaults(func=cmd_ref_query)
 
     args = p.parse_args(argv)
     args.func(args)
