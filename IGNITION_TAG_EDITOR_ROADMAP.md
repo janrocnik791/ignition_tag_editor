@@ -289,6 +289,13 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   ostane. **Meja commit-a:** en commit. **Ročno:** uvozi sintetični provider, preglej štetja.
 
 ### C1. Repozitorij lazy drevesa + podrobnosti (headless)
+- **Status:** zaključeno. Implementirano v `editor/repository.py` (`get_provider_root`,
+  `get_children(parent_uid, limit, offset)`, `child_count`, `get_node`, `get_parent`,
+  `breadcrumbs`, `full_path`, `node_details`; `list_providers` re-export), testi
+  `tests/test_repository.py`. Read-only nad `baseline_nodes`; brez migracije (indeksa
+  `parent_uid`/`provider_uid` sta že v v1). Zmogljivost na realnih podatkih:
+  `get_children(limit=200)` nad vozliščem s 6701 otroki ~10 ms. Iskanje (C3) in efektivni
+  UDT clani/parametri (C4) tu namerno še niso vključeni.
 - **Cilj:** API za lazy navigacijo in podrobnosti. **Viden rezultat:** (posredno prek UI).
 - **Zakaj zdaj:** UI potrebuje hitre omejene poizvedbe. **Odvisnosti:** B2.
 - **Ponovna uporaba:** `query.search`, `query.SEARCH_FIELDS`, `udt_resolver`.
@@ -536,12 +543,12 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**C1 – Repozitorij lazy drevesa + podrobnosti (headless).** `editor/repository.py`:
-`list_providers`, `get_children(parent_uid, limit, offset)`, `get_parent`, `breadcrumbs`,
-`full_path`, `node_details` (raw + efektivno), `child_count`. Ponovna uporaba
-`query.search`, `udt_resolver`; jedrni indeksi so že v shemi (`parent_uid`,
-`provider_uid`). Brez UI. Izvede se **šele po ločeni instrukciji**. (B1 in B2 sta
-zaključena.)
+**C2 – PySide6 lupina + lazy provider drevo.** Prvi grafični vmesnik: zagonski/open-project
+zaslon in provider drevo prek `QTreeView` + lasten lazy `QAbstractItemModel` nad
+`editor/repository.py` (`get_children`/`child_count` na zahtevo). Dodaj odvisnost
+**PySide6** (runtime) in **pytest-qt** (dev); GUI izoliran v paketu `ui/`. Minimum, ki
+dokaže arhitekturo na 277k vozliščih. Izvede se **šele po ločeni instrukciji**. (B1, B2,
+C1 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
