@@ -38,6 +38,8 @@ Phase 0, the read-only analytical foundation, is complete.
 
 The active phase is Phase 1: reference data and expected-state model. The immediate objective is to import the reference tables, normalize them into one internal model, validate their rows, retain source provenance, and support site-specific differences.
 
+First Phase 1 slice is implemented (not the whole phase): the separate reference index (analyzer/reference/, reference_index.sqlite) ingests the CP1250 semicolon CSV exports under data/mappings (L400, L1600, Legenda, and the "Novo poimenovanje" template) into the expected-state model with provenance, cross-row validation, and read-only ref-build | ref-sources | ref-validate | ref-query commands. Real reference CSVs stay git-ignored; tests use synthetic CP1250 fixtures. L400/L1600 are Stahovica lines. Remaining Phase 1 work includes confirming member obligation (required/optional), group-type -> UDT-type mapping, and ingesting later manually confirmed mapping tables.
+
 Do not start the mapping engine, UI, mutation model, or export system unless the current task explicitly moves into that phase.
 
 When a phase is accepted as complete, update this section and the roadmap in the same change.
