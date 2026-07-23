@@ -1,180 +1,199 @@
-Ignition Tag Editor
-
-Project purpose
-
-Build a Calcit-first desktop tool for analysing, mapping, restructuring, validating, and later exporting Ignition tag structures.
-
-Target environment:
-
-Ignition 8.3
-
-Calcit Stahovica and Gospić
-
-IO, UNS, and UDT JSON exports
-
-Python 3.13
-
-The application works offline from exported files. It must not write directly to an active Ignition Gateway or PLC.
-
-Sources of truth
-
-Use this order when working on a task:
-
-The user's current instruction and the plan approved in the current Claude Code session.
-
-The actual repository, tests, schemas, and input data.
-
-IGNITION_TAG_EDITOR_ROADMAP.md for product direction, phase boundaries, and non-goals.
-
-Existing generated reports only as evidence from a particular run, not as permanent truth.
-
-Inspect the repository before proposing changes. Do not assume that a module, field, command, or path exists because it appeared in an earlier discussion.
-
-Read only the parts of the roadmap and codebase relevant to the current task. Do not load large exports into the conversation when they can be inspected programmatically.
-
-Current checkpoint
-
-The product direction is now editor-first. See IGNITION_TAG_EDITOR_ROADMAP.md for the single authoritative sequence. Reference ingestion is no longer the active phase; it is completed supporting infrastructure that is integrated later (roadmap milestone J).
-
-Completed and retained: Phase 0 (analyzer/ read-only analytical foundation) and the reference importer (analyzer/reference/, reference_index.sqlite, ref-build | ref-sources | ref-validate | ref-query). Real reference CSVs stay git-ignored; tests use synthetic fixtures.
-
-The active direction is to build the first useful vertical product slice in this order: persistent work project and JSON imports -> read-only visual explorer (PySide6 lazy trees, search, inspector, UDT context) -> exact relationship layer -> manual relationship workflow -> working-copy operation model -> simulation, diff, undo/redo -> scoped Ignition 8.3 JSON export with round-trip verification -> one manually completed golden line -> only then reference integration, grouping rules, and fuzzy matching.
-
-The immediate next implementation checkpoint is roadmap B1: the self-contained project.sqlite model, schema, and lifecycle (create/open/save/close/recover) with a migration runner. Do not begin reference-driven mapping, grouping, or naming approximation before the editor, manual workflow, and first safe export exist.
-
-Confirmed decisions: desktop UI is PySide6/Qt with a lazy QAbstractItemModel; a work project is one self-contained project.sqlite embedding an immutable baseline snapshot plus separate relationships, operations, and metadata tables; stable node_uid identity survives rename/move because those are operations, not baseline mutations.
-
-When a milestone is accepted as complete, update this section and the roadmap in the same change.
-
-Claude Code workflow
-
-Plan Mode
-
-Plan Mode is the default starting point for a new implementation task.
-
-Make no code or data changes.
-
-Inspect the current repository, relevant tests, schemas, fixtures, and a bounded sample of real data.
-
-Identify existing components that can be reused.
-
-Resolve important unknowns from evidence instead of guessing.
-
-Produce one concrete implementation plan for the requested scope.
-
-Include affected components, data-flow changes, tests, risks, migrations if needed, and measurable acceptance criteria.
-
-Separate facts confirmed in the repository from assumptions that still require a decision.
-
-Stop after the plan and wait for approval or the switch to Auto Mode.
-
-Auto Mode
-
-After the plan is approved:
-
-Implement the approved scope only.
-
-Work in small, reviewable checkpoints.
-
-Preserve existing behaviour unless the approved plan intentionally changes it.
-
-Add or update tests with each behavioural change.
-
-Run focused tests first and the full relevant suite before completion.
-
-Avoid unrelated refactors and future-phase scaffolding.
-
-Report changed files, implemented behaviour, test results, unresolved issues, and the next roadmap step concisely.
-
-Do not repeat the full investigation or dump large result tables in the final response. Write detailed machine-readable findings to generated reports and summarize only decision-relevant results.
-
-Git workflow
-
-After an approved implementation is complete, for each coherent checkpoint:
-
-Inspect the diff before committing.
-
-Run the focused tests for the change and then the full relevant suite; both must pass.
-
-Create one meaningful commit per completed coherent checkpoint. End each commit message with the trailer:
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
-
-Push the current branch to origin.
-
-Report the commit hash, branch, and test results.
-
-Never force-push. Never commit real Calcit data, credentials, generated databases, generated reports, or unrelated changes. Real exports under data/raw, data/mappings, and everything under data/generated stay ignored; only non-confidential test fixtures under data/fixtures and tests/fixtures are tracked.
-
-Data and safety invariants
-
-Treat original inputs as immutable. Never overwrite files in data/raw or their equivalent import location.
-
-Keep the original configuration object available alongside any normalized representation.
-
-Preserve unknown Ignition properties so future lossless export remains possible.
-
-Store planned changes separately from imported nodes. Analysis must not mutate the baseline.
-
-Write generated databases, reports, fixtures derived from real data, and future exports only to their designated generated or test locations.
-
-Never silently delete, rename, move, or overwrite a tag.
-
-Never auto-approve an ambiguous inferred relationship.
-
-Keep site and provider context in every identity and lookup where collisions are possible.
-
-Prefer deterministic, explainable rules over opaque similarity guesses.
-
-Ignition domain rules
-
-Resolve UDT definitions per site/provider. The same typeId can validly have different definitions in Stahovica and Gospić.
-
-UDT inheritance and instance overrides must be resolved before comparing an instance with its effective definition.
-
-{InstanceName} is an Ignition-provided parameter and is not unresolved merely because it is absent from user parameters.
-
-A nested UdtInstance may validly have an empty typeId when its type is defined by the parent UDT definition.
-
-Multiple tags sharing an opcItemPath are not automatically an error.
-
-References to known external providers are informational unless a task-specific rule says otherwise.
-
-Do not expand inherited UDT members into local instance overrides.
-
-A relationship must retain its evidence, source, and one of the defined states such as EXACT, INFERRED, AMBIGUOUS, MISSING, CONFLICT, EXTERNAL, or NOT_APPLICABLE.
-
-Manual confirmations outrank later heuristic suggestions but must remain auditable.
-
-Efficient work on large datasets
-
-Analyse large JSON, CSV, and SQLite data with scripts, queries, indexes, and bounded samples.
-
-Do not print complete exports, large node collections, or full report files into the model context.
-
-Reuse existing indexes and generated analysis when their input hashes still match.
-
-Use small synthetic fixtures for unit tests and bounded real fixtures for regression tests.
-
-Run a full-dataset validation only when it is required by the acceptance criteria or as the final integration check.
-
-Summarize counts and representative examples; keep complete findings in report files.
-
-Quality gate
-
-A task is complete only when:
-
-its acceptance criteria are demonstrably satisfied;
-
-new behaviour is covered by tests;
-
-existing relevant tests still pass;
-
-output is deterministic;
-
-source provenance and provider/site context are retained;
-
-no original data was modified;
-
-documentation is updated when a contract, schema, phase, or product decision changed.
-
-Do not mark a whole roadmap phase complete merely because one implementation task within it passes.
+# Ignition Tag Editor — Claude Code operating manual
+
+This file is the permanent operating manual for every Claude Code session in this
+repository. Read it in full at the start of a task. It defines the rules and working
+protocol; it does not repeat the product design, which lives in the roadmap.
+
+## 1. Project purpose and authoritative documents
+
+Build a Calcit-first, offline desktop tool for analysing, mapping, restructuring,
+validating, and later exporting Ignition tag structures. The product direction is
+**editor-first**: a usable visual editor with exact relationships, manual corrections,
+a safe working-copy/operation model, and scoped export come before reference tables,
+grouping rules, and fuzzy matching.
+
+Authority, in order:
+
+1. **`main`** is the authoritative stable baseline. Start every task from an
+   up-to-date `main`.
+2. **`CLAUDE.md`** (this file) defines permanent repository rules and the working
+   protocol.
+3. **`IGNITION_TAG_EDITOR_ROADMAP.md`** is the authoritative product architecture,
+   implementation sequence, checkpoint scope, and acceptance criteria. Do **not**
+   duplicate the roadmap here; reference it by section/checkpoint.
+
+For an individual task, resolve questions in this order: the current user instruction
+and the plan approved in the session → the actual repository, tests, schemas, and input
+data → the roadmap → existing generated reports (only as evidence from a particular run,
+never as permanent truth).
+
+Inspect the repository before proposing changes. Do not assume a module, field, command,
+or path exists because it appeared in earlier discussion. Read only the parts of the
+roadmap and codebase relevant to the current task.
+
+## 2. Target environment and safety boundaries
+
+- Ignition **8.3**; Python **3.13**; Calcit **Stahovica** and **Gospić**; input is IO,
+  UNS, and UDT **JSON exports**.
+- The application is an **offline** editor that works from exported files. It must
+  **never** write directly to an active Ignition Gateway or PLC.
+- Imported inputs are immutable. Never overwrite files in `data/raw`, `data/mappings`,
+  or any equivalent import location.
+
+## 3. Repository and architecture invariants
+
+- **Layer separation.** Imported baseline, manual relationships, staged operations,
+  simulated state, and export are separate layers. Editing never mutates baseline rows
+  directly; planned changes are stored as operations, not applied to imported nodes.
+- **Losslessness.** Preserve the original tag object and all unknown Ignition properties
+  so future lossless export remains possible. Keep the original configuration object
+  available alongside any normalized representation.
+- **Identity.** A stable internal node identity survives rename and move (those are
+  operations, not baseline mutations). Every identity and lookup carries enough
+  site/provider context to prevent collisions.
+- **Relationships.** A relationship must retain its evidence, source, state, and audit
+  data. The valid states and evidence types are defined authoritatively in the roadmap
+  relationship/evidence model (§10) — do not hard-code a competing list here. Manual
+  confirmation outranks later heuristic suggestions but must remain auditable. An
+  unresolved relationship is valid product state. No fuzzy match may silently become an
+  approved relationship, and no ambiguous inferred relationship is auto-approved.
+- **Determinism.** Prefer deterministic, explainable rules over opaque similarity
+  guesses; program output must be deterministic. Never silently delete, rename, move, or
+  overwrite a tag.
+
+**Ignition domain rules** (stable facts about the data):
+
+- Resolve UDT definitions per site/provider; the same `typeId` can validly differ
+  between Stahovica and Gospić.
+- Resolve UDT inheritance and instance overrides before comparing an instance with its
+  effective definition; do not expand inherited members into local instance overrides.
+- `{InstanceName}` is an Ignition-provided parameter and is not unresolved merely because
+  it is absent from user parameters.
+- A nested `UdtInstance` may validly have an empty `typeId` (the parent definition
+  supplies the type).
+- Multiple tags sharing an `opcItemPath` are not automatically an error.
+- References to known external providers are informational unless a task-specific rule
+  says otherwise.
+
+## 4. Roadmap execution protocol
+
+Work **checkpoint by checkpoint**; the roadmap (checkpoints A–L) defines scope. Plan Mode
+is the default entry point for an implementation task: make no changes, inspect the repo
+and relevant tests/schemas/fixtures (and a bounded sample of real data), reuse existing
+components, resolve unknowns from evidence, and produce one concrete plan for exactly the
+active checkpoint, separating confirmed facts from assumptions.
+
+For each implementation request:
+
+1. Read this file and the roadmap sections relevant to the active checkpoint.
+2. Inspect the actual repository state rather than relying only on checkpoint status text.
+3. Identify the first incomplete checkpoint and verify its prerequisites.
+4. Prepare a concise internal implementation plan.
+5. Implement exactly that checkpoint; work autonomously on ordinary technical decisions
+   already constrained by the roadmap.
+6. Do not expand into later checkpoints because related work would be convenient.
+7. Run focused tests and then the complete relevant test suite.
+8. Inspect the final diff for correctness, scope creep, unrelated changes, generated
+   files, secrets, and confidential data.
+9. Update the roadmap checkpoint status and the mutable **Current checkpoint** section
+   (§9) below.
+10. Create meaningful commits for coherent completed work and push the working branch
+    (see §7).
+11. Report: completed checkpoint; delivered user-visible and architectural result; key
+    decisions or roadmap deviations; changed files; test commands and results; branch and
+    commit hash; a short manual verification procedure; and the exact next checkpoint.
+12. Stop and wait for explicit user approval before beginning the next checkpoint.
+
+The Slovenian instruction **“Potrjujem, nadaljuj z naslednjim checkpointom.”** authorizes
+implementing exactly **one** next incomplete checkpoint. It never authorizes implementing
+several checkpoints in sequence.
+
+**Roadmap integrity.** The editor-first order is authoritative: manual inspection, exact
+relationships, manual corrections, working-copy operations, simulation, diff, and safe
+export precede fuzzy mapping and predictive automation. Do not silently reorder, merge,
+skip, or broaden checkpoints. Small implementation-driven clarifications may be documented
+in the roadmap. Any material architectural or product-direction change requires user
+approval. Keep historically completed work (Phase 0 and the reference importer) accurately
+represented.
+
+## 5. Decision and approval boundaries
+
+Do not ask for confirmation about ordinary implementation choices already determined by
+the roadmap; decide and proceed. Stop and ask the user only when:
+
+- repository evidence materially contradicts the roadmap;
+- a decision would change the architecture, data model, product scope, MVP, or export
+  safety;
+- the work required belongs to a later checkpoint;
+- required information, access, or source material is missing;
+- delivering it would break existing accepted behaviour;
+- tests expose a fundamental defect in an already accepted checkpoint;
+- a destructive or history-rewriting Git operation appears necessary.
+
+When stopping, explain the evidence, recommend one default, and describe its consequences.
+
+## 6. Testing and acceptance requirements
+
+- Add or update tests with every behavioural change. Run the focused tests first, then the
+  full relevant suite; both must pass. All existing tests must keep passing.
+- A checkpoint is complete only when its roadmap acceptance criteria and its tests
+  demonstrably pass, output is deterministic, source provenance and provider/site context
+  are retained, and no original data was modified. Do **not** silently weaken tests or
+  roadmap acceptance criteria to finish a checkpoint. Do not mark a whole roadmap phase
+  complete because one task within it passes.
+- Update documentation when a contract, schema, checkpoint status, or product decision
+  changes.
+- **Large data.** Analyse large JSON/CSV/SQLite with scripts, queries, indexes, and
+  bounded samples. Do not print complete exports, large node collections, or full report
+  files into the model context; summarize counts and representative examples and keep
+  complete findings in report files. Use small synthetic fixtures for unit tests and
+  bounded fixtures for regression tests. Run full-dataset validation only when an
+  acceptance criterion requires it or as a final integration check. Reuse existing indexes
+  and generated analysis when their input hashes still match.
+
+## 7. Git workflow
+
+- Begin from an up-to-date authoritative `main`. Inspect the branch and working-tree state
+  before editing, and preserve unrelated user changes.
+- Implement a checkpoint on a focused branch; keep `main` stable. Never force-push and
+  never rewrite shared history — if a destructive or history-rewriting operation seems
+  necessary, stop and ask (§5).
+- Create one meaningful commit per coherent completed unit of work. End each commit
+  message with the trailer:
+  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+- Push the current working branch to origin. Report the commit hash, branch, and test
+  results.
+- Do not commit unrelated changes, and do not mark a checkpoint complete until its
+  acceptance criteria and tests pass.
+
+## 8. Confidential data and repository hygiene
+
+Never commit:
+
+- real Calcit JSON or CSV exports;
+- confidential rows derived from real Calcit data;
+- credentials or secrets;
+- generated SQLite project/index databases;
+- generated reports or application exports;
+- temporary files, caches, build output, or unrelated workspace changes.
+
+Ignored locations: `data/raw`, `data/mappings`, and everything under `data/generated`.
+Tracked test data: only **synthetic, non-confidential** fixtures under `data/fixtures` and
+`tests/fixtures`. Committed fixtures must be synthetic and contain only the minimum
+structure needed to reproduce behaviour. Write generated databases, reports, and exports
+only to their designated generated locations.
+
+## 9. Current checkpoint
+
+Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
+a changelog.
+
+- **Last completed:** Checkpoint A — editor-first roadmap reset. Retained supporting
+  infrastructure: Phase 0 (`analyzer/` read-only analytical foundation) and the reference
+  importer (`analyzer/reference/`, `reference_index.sqlite`, `ref-*` commands).
+- **Active / next:** Checkpoint B1 — the self-contained `project.sqlite` model, schema,
+  and lifecycle (create/open/save/close/recover) with a migration runner. No UI.
+- **Prerequisite state:** `main` is the authoritative baseline; the test suite passes; no
+  `editor/` package or GUI exists yet.
+- **Branch:** implement B1 on a focused branch off `main`.
+- **Blocker:** none.
