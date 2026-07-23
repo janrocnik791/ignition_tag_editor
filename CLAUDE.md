@@ -188,19 +188,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint B2 — source import into the immutable baseline
-  (`editor/import_service.py`: `discover_sources`, `validate_source`, `import_source`,
-  `list_providers`, `compute_provider_uid`/`compute_node_uid`; `tests/test_import.py`;
-  synthetic fixtures `tests/fixtures/editor/`). Verified on real exports: 277,607 nodes,
-  0 `node_uid` collisions, sources unchanged. Also done: A, B1.
-- **Active / next:** Checkpoint C1 — headless lazy-tree + details repository
-  (`editor/repository.py`): `get_children`, `get_parent`, `breadcrumbs`, `node_details`,
-  `child_count`, reusing `query.search` and `udt_resolver`. No UI.
+- **Last completed:** Checkpoint C1 — headless lazy-tree + details repository
+  (`editor/repository.py`: `get_provider_root`, `get_children(parent_uid, limit, offset)`,
+  `child_count`, `get_node`, `get_parent`, `breadcrumbs`, `full_path`, `node_details`;
+  `tests/test_repository.py`). Read-only over `baseline_nodes`; real-data perf:
+  `get_children(limit=200)` over a 6,701-child node ~10 ms. Also done: A, B1, B2.
+- **Active / next:** Checkpoint C2 — first PySide6 GUI: open-project screen + lazy provider
+  tree (`QTreeView` + custom lazy `QAbstractItemModel` over `editor/repository.py`). Adds
+  PySide6 (runtime) + pytest-qt (dev); GUI isolated in a new `ui/` package.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
-  provides project lifecycle + baseline import (schema v1: `project_meta`, `sources`,
-  `baseline_nodes` with `node_uid`/`provider_uid`/`sibling_index`/`raw_json`); the test
-  suite passes (92 tests); no GUI, `relationships`, or `operations` tables exist yet.
-- **Branch:** B2 implemented on `checkpoint-b2` (stacked on `checkpoint-b1` →
-  `docs-claude-operating-manual`); implement C1 on a focused branch once these land on
-  `main`.
+  provides project lifecycle, baseline import, and the read-only repository (schema v1:
+  `project_meta`, `sources`, `baseline_nodes`); the test suite passes (106 tests); no GUI,
+  search (C3), UDT effective resolution (C4), `relationships`, or `operations` yet.
+- **Branch:** C1 implemented on `checkpoint-c1` (off `main`); implement C2 on a focused
+  branch once C1 lands on `main`.
 - **Blocker:** none.

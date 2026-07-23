@@ -25,4 +25,15 @@ from .project import (  # noqa: F401
     open_project,
     recover,
 )
+from .repository import (  # noqa: F401
+    RepositoryError,
+    breadcrumbs,
+    child_count,
+    full_path,
+    get_children,
+    get_node,
+    get_parent,
+    get_provider_root,
+    node_details,
+)
 from .schema import SCHEMA_VERSION  # noqa: F401
