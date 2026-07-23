@@ -7,6 +7,16 @@ Mejnik B1 uvaja samostojen ``project.sqlite`` (model projekta, shema, migracijsk
 tekac, zivljenjski cikel). Uvoz tagov v baseline pride v B2.
 """
 
+from .import_service import (  # noqa: F401
+    ImportSourceError,
+    compute_node_uid,
+    compute_provider_uid,
+    discover_sources,
+    import_source,
+    list_providers,
+    parse_provider_name,
+    validate_source,
+)
 from .project import (  # noqa: F401
     Project,
     ProjectError,

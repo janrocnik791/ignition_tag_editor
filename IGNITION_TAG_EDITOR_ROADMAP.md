@@ -262,6 +262,13 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   rollback. **Meja commit-a:** en commit. **Ročno:** ustvari projekt, znova odpri.
 
 ### B2. Uvoz virov v baseline
+- **Status:** zaključeno. Implementirano v `editor/import_service.py`
+  (`discover_sources`, `validate_source`, `import_source`, `list_providers`,
+  `compute_provider_uid`/`compute_node_uid`, `parse_provider_name`), testi
+  `tests/test_import.py`, sintetični fixture `tests/fixtures/editor/*`. Ponovno
+  uporabljeni `analyzer.model.TagRow`, `analyzer.build.sha256_file`, `classify_file`.
+  Preverjeno na realnih izvozih: 277.607 vozlišč, 0 trkov `node_uid`, viri
+  nespremenjeni. Idempotentno/zamenjava po (provider, sha256).
 - **Cilj:** uvoz IO/UNS/UDT JSON v nespremenljiv baseline z identiteto in provenance.
 - **Viden rezultat:** projekt vsebuje označene baseline-e več providerjev/lokacij.
 - **Zakaj zdaj:** brez baseline ni kaj prikazati. **Odvisnosti:** B1.
@@ -529,10 +536,12 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**B2 – Uvoz virov v baseline.** Ponovna uporaba `build._walk` / `model.TagRow` /
-`sha256_file` za uvoz IO/UNS/UDT JSON v nespremenljiv `baseline_nodes` (z `node_uid`,
-`provider_uid`, `sibling_index`, `raw_json`) in polnjenje `sources`. Brez UI. Izvede se
-**šele po ločeni instrukciji**. (B1 je zaključen.)
+**C1 – Repozitorij lazy drevesa + podrobnosti (headless).** `editor/repository.py`:
+`list_providers`, `get_children(parent_uid, limit, offset)`, `get_parent`, `breadcrumbs`,
+`full_path`, `node_details` (raw + efektivno), `child_count`. Ponovna uporaba
+`query.search`, `udt_resolver`; jedrni indeksi so že v shemi (`parent_uid`,
+`provider_uid`). Brez UI. Izvede se **šele po ločeni instrukciji**. (B1 in B2 sta
+zaključena.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
