@@ -1,0 +1,33 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "Material",
+      "parameters": {
+        "Linija": { "dataType": "String" }
+      },
+      "tagType": "UdtType",
+      "tags": [
+        {
+          "name": "Sifra",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[IO_TEST_SIE]urejeni_tagi/Porocilni_tagi/SIF_L{Linija}"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        },
+        {
+          "name": "Zunanji",
+          "sourceTagPath": {
+            "bindType": "parameter",
+            "binding": "[DRUG_PROVIDER]nekaj/zunanja/pot"
+          },
+          "tagType": "AtomicTag",
+          "valueSource": "reference"
+        }
+      ]
+    }
+  ]
+}

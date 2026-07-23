@@ -1,0 +1,47 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "TestSite",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Prazna",
+          "tagType": "Folder"
+        },
+        {
+          "name": "DIC2030",
+          "parameters": {
+            "Tehnoloska_stevilka": {
+              "dataType": "String",
+              "value": "2030"
+            }
+          },
+          "tagType": "UdtInstance",
+          "typeId": "Meritev",
+          "tags": [
+            { "name": "Meritev", "tagType": "AtomicTag" },
+            { "name": "Alarm_H", "tagType": "AtomicTag" },
+            { "name": "SetPoint", "tagType": "AtomicTag" }
+          ]
+        },
+        {
+          "name": "DIC2040",
+          "parameters": {
+            "Tehnoloska_stevilka": {
+              "dataType": "String",
+              "value": "2040"
+            }
+          },
+          "tagType": "UdtInstance",
+          "typeId": "Meritev",
+          "tags": [
+            { "name": "Meritev", "tagType": "AtomicTag" },
+            { "name": "Alarm_H", "tagType": "AtomicTag" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "Site",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Inst_override",
+          "typeId": "Child",
+          "tagType": "UdtInstance",
+          "tags": [
+            { "name": "A", "tagType": "AtomicTag" }
+          ]
+        },
+        {
+          "name": "Inst_extra",
+          "typeId": "Child",
+          "tagType": "UdtInstance",
+          "tags": [
+            { "name": "A", "tagType": "AtomicTag" },
+            { "name": "B", "tagType": "AtomicTag" },
+            { "name": "C", "tagType": "AtomicTag" },
+            { "name": "X_ni_v_def", "tagType": "AtomicTag" }
+          ]
+        },
+        {
+          "name": "Inst_ghost",
+          "typeId": "Ghost",
+          "tagType": "UdtInstance"
+        },
+        {
+          "name": "Inst_base_missing_B",
+          "typeId": "Base",
+          "tagType": "UdtInstance",
+          "tags": [
+            { "name": "A", "tagType": "AtomicTag" }
+          ]
+        },
+        {
+          "name": "Inst_nested",
+          "typeId": "Base",
+          "tagType": "UdtInstance",
+          "tags": [
+            { "name": "A", "tagType": "AtomicTag" },
+            { "name": "B", "tagType": "AtomicTag" },
+            {
+              "name": "Sub",
+              "tagType": "UdtInstance",
+              "tags": [
+                { "name": "A", "tagType": "AtomicTag" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "BadTypeIdAtomic",
+          "typeId": "Base",
+          "dataType": "Boolean",
+          "tagType": "AtomicTag"
+        }
+      ]
+    }
+  ]
+}

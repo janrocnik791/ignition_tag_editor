@@ -84,6 +84,23 @@ Report changed files, implemented behaviour, test results, unresolved issues, an
 
 Do not repeat the full investigation or dump large result tables in the final response. Write detailed machine-readable findings to generated reports and summarize only decision-relevant results.
 
+Git workflow
+
+After an approved implementation is complete, for each coherent checkpoint:
+
+Inspect the diff before committing.
+
+Run the focused tests for the change and then the full relevant suite; both must pass.
+
+Create one meaningful commit per completed coherent checkpoint. End each commit message with the trailer:
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+Push the current branch to origin.
+
+Report the commit hash, branch, and test results.
+
+Never force-push. Never commit real Calcit data, credentials, generated databases, generated reports, or unrelated changes. Real exports under data/raw, data/mappings, and everything under data/generated stay ignored; only non-confidential test fixtures under data/fixtures and tests/fixtures are tracked.
+
 Data and safety invariants
 
 Treat original inputs as immutable. Never overwrite files in data/raw or their equivalent import location.
