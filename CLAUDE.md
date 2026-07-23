@@ -34,15 +34,17 @@ Read only the parts of the roadmap and codebase relevant to the current task. Do
 
 Current checkpoint
 
-Phase 0, the read-only analytical foundation, is complete.
+The product direction is now editor-first. See IGNITION_TAG_EDITOR_ROADMAP.md for the single authoritative sequence. Reference ingestion is no longer the active phase; it is completed supporting infrastructure that is integrated later (roadmap milestone J).
 
-The active phase is Phase 1: reference data and expected-state model. The immediate objective is to import the reference tables, normalize them into one internal model, validate their rows, retain source provenance, and support site-specific differences.
+Completed and retained: Phase 0 (analyzer/ read-only analytical foundation) and the reference importer (analyzer/reference/, reference_index.sqlite, ref-build | ref-sources | ref-validate | ref-query). Real reference CSVs stay git-ignored; tests use synthetic fixtures.
 
-First Phase 1 slice is implemented (not the whole phase): the separate reference index (analyzer/reference/, reference_index.sqlite) ingests the CP1250 semicolon CSV exports under data/mappings (L400, L1600, Legenda, and the "Novo poimenovanje" template) into the expected-state model with provenance, cross-row validation, and read-only ref-build | ref-sources | ref-validate | ref-query commands. Real reference CSVs stay git-ignored; tests use synthetic CP1250 fixtures. L400/L1600 are Stahovica lines. Remaining Phase 1 work includes confirming member obligation (required/optional), group-type -> UDT-type mapping, and ingesting later manually confirmed mapping tables.
+The active direction is to build the first useful vertical product slice in this order: persistent work project and JSON imports -> read-only visual explorer (PySide6 lazy trees, search, inspector, UDT context) -> exact relationship layer -> manual relationship workflow -> working-copy operation model -> simulation, diff, undo/redo -> scoped Ignition 8.3 JSON export with round-trip verification -> one manually completed golden line -> only then reference integration, grouping rules, and fuzzy matching.
 
-Do not start the mapping engine, UI, mutation model, or export system unless the current task explicitly moves into that phase.
+The immediate next implementation checkpoint is roadmap B1: the self-contained project.sqlite model, schema, and lifecycle (create/open/save/close/recover) with a migration runner. Do not begin reference-driven mapping, grouping, or naming approximation before the editor, manual workflow, and first safe export exist.
 
-When a phase is accepted as complete, update this section and the roadmap in the same change.
+Confirmed decisions: desktop UI is PySide6/Qt with a lazy QAbstractItemModel; a work project is one self-contained project.sqlite embedding an immutable baseline snapshot plus separate relationships, operations, and metadata tables; stable node_uid identity survives rename/move because those are operations, not baseline mutations.
+
+When a milestone is accepted as complete, update this section and the roadmap in the same change.
 
 Claude Code workflow
 
