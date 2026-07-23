@@ -1,524 +1,543 @@
 # Ignition Tag Editor – razvojna smer in implementacijski načrt
 
-**Status dokumenta:** delovna produktna usmeritev  
-**Ciljno okolje:** Calcit, Ignition 8.3  
-**Primarni lokaciji:** Stahovica in Gospić  
-**Datum:** 23. julij 2026
+**Status dokumenta:** delovna produktna usmeritev (editor-first ponovni zagon smeri)
+**Ciljno okolje:** Calcit, Ignition 8.3
+**Primarni lokaciji:** Stahovica in Gospić
+**Datum posodobitve:** 23. julij 2026
+
+> Ta dokument je bil v celoti prepisan. Vsebuje **eno samo** nepротislovno smer:
+> najprej uporaben vizualni urejevalnik, šele nato referenčne tabele, samodejno
+> grupiranje in približno ujemanje. Prejšnji vrstni red (najprej referenčni uvoz in
+> hevristike) je opuščen. Zgodovina že opravljenega dela (Faza 0 in referenčni
+> uvoznik) je ohranjena in prekvalificirana kot podporna infrastruktura.
+
+---
 
 ## 1. Namen programa
 
-Cilj je izdelati namizni program, ki zna iz obstoječih Ignition izvozov:
+Namizni program, ki iz obstoječih Ignition izvozov omogoča:
 
 1. prebrati in ohraniti celotno strukturo IO, UNS in UDT tagov;
-2. povezati surove IO tage, urejene IO tage, UDT člane in UNS instance;
-3. primerjati trenutno stanje s pravili in referenčnimi Excel tabelami;
-4. predlagati preimenovanja, premike, nove tage in spremembe referenc;
-5. uporabniku omogočiti pregled ter potrditev vsake spremembe;
-6. pred izvozom simulirati in validirati končno stanje;
-7. izdelati varen Ignition JSON za celoten obseg ali samo za izbrane tage;
-8. po ponovnem izvozu iz Ignitiona preveriti, ali je nameščeno stanje enako načrtovanemu.
+2. jih vizualno pregledovati in navigirati po velikih drevesih;
+3. prikazati **samo dokazljive (exact)** relacije med plastmi tagov;
+4. pustiti nerešene relacije **vidno nerešene**;
+5. omogočiti uporabniku ročno ustvarjanje in potrditev relacij;
+6. varno voditi spremembe v ločeni delovni kopiji (operacije, ne mutacije);
+7. simulirati končno drevo, prikazati diff, undo/redo;
+8. izdelati varen, omejen Ignition 8.3 JSON izvoz z round-trip preverjanjem;
+9. eno ročno dokončano linijo uporabiti kot golden dataset;
+10. **šele nato** dodati referenčne tabele, pravila grupiranja in približno ujemanje.
 
-Program ni neposredni urejevalnik aktivnega Gatewaya. Izvorni JSON ostane nespremenjen, vse spremembe se najprej vodijo v ločenem delovnem modelu, v Ignition pa se prenesejo šele prek pregledanega izvoza.
+Program ni neposredni urejevalnik aktivnega Gatewaya. Izvorni JSON ostane
+nespremenjen; vse spremembe se vodijo v ločenem delovnem modelu, v Ignition pa
+prenesejo šele prek pregledanega izvoza.
 
-## 2. Osnovne produktne odločitve
+## 2. Ciljno okolje
 
-### 2.1 Calcit-first
+- Ignition **8.3**
+- Python **3.13**
+- Calcit **Stahovica** in **Gospić**
+- vhod: IO, UNS in UDT **JSON izvozi**
+- offline namizna aplikacija
+- **brez** neposrednega pisanja v aktivni Gateway ali PLC
 
-Prva različica je namenjena resničnim podatkom Calcita in mora zanesljivo podpirati Stahovico ter Gospić. Pravila naj bodo zapisana konfiguracijsko, da jih bo pozneje mogoče razširiti, vendar prva različica ni generičen urejevalnik za vsak Ignition projekt.
+## 3. Trenutno implementirano stanje (baseline)
 
-### 2.2 Izvorni podatki so nespremenljivi
+Testi zeleni: `python -m pytest -q` → **64 uspešnih** (43 Faza 0 + 21 referenčni uvoz).
 
-Datoteke v `data/raw` so vhod in se nikoli ne prepisujejo. Program hrani:
+**Faza 0 – analitična osnova (zaključeno, ostaja):** `analyzer/`
+- JSON parser + SQLite indeks tagov (`build.py`, `model.py`, `schema.py`);
+- iskalni sloj (`query.py`);
+- razreševanje UDT definicij, dedovanja, parametrov, override (`udt_resolver.py`);
+- read-only validator z razlago (`validate.py`), poročila (`reports.py`);
+- CLI (`__main__.py`): `build | search | stats | raw | validate | inspect-udt`.
+- V realni rabi ~277.000 vozlišč; izvorne datoteke ostanejo nespremenjene.
 
-- originalni objekt;
-- normalizirani notranji model;
-- ločene načrtovane spremembe;
-- simulirano končno stanje;
-- izvožene datoteke in poročila.
+**Referenčni uvoznik (zaključeno, prekvalificirano v podporno infrastrukturo):**
+`analyzer/reference/`
+- ločen `reference_index.sqlite`, uvoz CP1250 CSV izvozov (`ref-build | ref-sources |
+  ref-validate | ref-query`), model pričakovanega stanja, navzkrizna validacija.
+- **Ostaja uporaben, a NE določa več takojšnjega razvojnega vrstnega reda.** Priključi
+  se pozneje (mejnik J) kot neobvezen kontekst in vir predlogov.
 
-### 2.3 Povezave morajo biti razložljive
+**Ugotovljene omejitve obstoječega indeksa za urejanje/izvoz** (dejansko preverjeno):
+- tabela `tags` nima stolpca za **vrstni red sorojencev** (red je le implicitno po rowid);
+- `id` je rowid, ki se ob vsaki gradnji **na novo dodeli** → ni stabilna identiteta;
+- **provider ni eksplicit** (izpeljan iz imena datoteke, koren JSON ima `name:""`);
+- `raw_properties` = originalni objekt **brez otrok** → za brezizgubno rekonstrukcijo
+  je treba otroke ponovno vgnezditi v izvirnem vrstnem redu.
 
-Program ne sme samo trditi, da sta taga povezana. Za vsako povezavo mora prikazati:
+**Še ne obstaja:** grafični vmesnik, trajni model ročnih relacij, model operacij,
+simulirano drevo, undo/redo, izvoz.
 
-- uporabljen dokaz;
-- izvor pravila;
-- stopnjo zanesljivosti;
-- morebitne konflikte;
-- razlog, če povezave ni bilo mogoče določiti.
+## 4. Produktna strategija in razlog za spremenjen vrstni red
 
-### 2.4 Program predlaga, uporabnik potrdi
+Prejšnja smer je postavljala referenčni uvoz, samodejno mapiranje, prepoznavo sklopov
+in približno poimenovanje **pred** kakršenkoli vizualni urejevalnik. Glavna težava je
+bila **manjkajoča povratna zanka**: parserji in hevristike lahko poljubno rastejo, a
+uporabnik njihovega rezultata ne vidi, ne more ročno popraviti relacije, urediti
+strukture ali preizkusiti majhne end-to-end spremembe.
 
-Samodejno zaznana sprememba še ni odobrena sprememba. Uporabnik mora imeti možnost predlog:
+Nova strategija je **editor-first**: najprej najpreprostejši uporaben urejevalnik,
+vidna in navigabilna struktura, samo dokazljive relacije, ročne popravke, varen model
+delovne kopije, omejen Ignition 8.3 izvoz z round-trip preverjanjem — in šele nato
+avtomatizacija, ki se **ocenjuje** proti eni ročno dokončani liniji (golden dataset).
+Urejevalnik je temelj, na katerem se pozneje meri vsaka avtomatika. Ročni popravki in
+dokončane linije postanejo testni podatki za prihodnje hevristike.
 
-- potrditi;
-- zavrniti;
-- ročno popraviti;
-- začasno pustiti nerešen;
-- razveljaviti.
-
-### 2.5 Najmanjši varen izvoz je privzet
-
-Program podpira dva načina:
-
-- **polni izvoz** za varnostno kopijo, celotno migracijo ali obnovo;
-- **omejeni izvoz** za običajno delo, kjer se izvozi samo izbran tag, več izbranih tagov, mapa, UDT instanca ali logični sklop.
-
-Običajni delovni tok uporablja omejeni izvoz.
-
-## 3. Trenutno stanje
-
-Analitična osnova je že izdelana:
-
-- uvoz IO, UNS in UDT JSON;
-- indeksiranje približno 277.000 vozlišč v SQLite;
-- iskanje in pregled strukture;
-- razreševanje UDT definicij, dedovanja in parametrov;
-- validator z razlago ugotovitev;
-- poročila v Markdown, CSV in JSON;
-- testi za glavne posebnosti Ignition podatkov;
-- ohranjanje izvornih datotek brez sprememb.
-
-To pomeni, da program podatke že zna prebrati in analizirati. Naslednji cilj ni izvoz ali končni uporabniški vmesnik, temveč zanesljiv model pričakovanega stanja in mapping med vsemi plastmi tagov.
-
-## 4. Ciljni delovni tok
+## 5. Celoten uporabniški tok (end-to-end)
 
 ```text
 Ustvari ali odpri delovni projekt
-→ uvozi IO, UNS, UDT in referenčne tabele
-→ izberi lokacijo, linijo ali vejo
-→ preglej zaznane naprave in sklope
-→ preglej povezave med vsemi plastmi tagov
-→ razreši nejasnosti
-→ ustvari predloge sprememb
-→ potrdi ali popravi predloge
-→ simuliraj končno stanje
-→ zaženi validacijo in preglej diff
-→ dodaj želene tage v izvozno košarico ali izberi polni izvoz
-→ ustvari Ignition JSON in poročilo
-→ uvozi JSON v Ignition
-→ ponovno izvozi isti obseg iz Ignitiona
-→ preveri enakost nameščenega in načrtovanega stanja
+→ uvozi IO, UNS in UDT JSON iz več providerjev in lokacij (nespremenljiv baseline)
+→ izberi provider/lokacijo/vejo in navigiraj veliko drevo (lazy)
+→ išči in preglej tag (raw + efektivne lastnosti, UDT kontekst, provenance)
+→ preglej SAMO dokazljive relacije; nerešeno ostane vidno nerešeno
+→ ročno poveži/razveži, potrdi ali zavrni relacijo
+→ stage-aj operacije (create/rename/move/update) ločeno od baseline
+→ simuliraj končno drevo, preglej diff, undo/redo
+→ shrani/ponovno odpri projekt brez izgube relacij in operacij
+→ izberi omejen obseg in izdelaj Ignition 8.3 JSON izvoz
+→ ponovno uvozi izvoz v aplikacijo in preveri enakost načrtovanega stanja
 ```
 
-## 5. Faze implementacije
-
-### Faza 0 – analitična osnova
-
-**Status:** zaključeno
-
-Obsega parser, SQLite indeks, UDT resolver, validator, poročila in obstoječe teste.
-
-Preostale anomalije se dokumentirajo in obravnavajo ločeno. Posamezna znana anomalija ne sme ustaviti razvoja celotnega produkta, če ne vpliva na naslednjo fazo.
-
-### Faza 1 – referenčni podatki in pričakovano stanje
-
-**Status:** naslednji razvojni korak
-
-Program mora uvoziti:
-
-- referenčne Excel tabele, kot sta `L400.xlsx` in `L1600.xlsx`;
-- legendo sklopov;
-- primere pravilnega končnega poimenovanja;
-- pozneje ročno potrjene mapping tabele.
-
-Podatki iz različnih tabel se pretvorijo v enoten notranji model. Najmanjši pričakovani nabor polj je:
-
-- lokacija;
-- proizvodnja;
-- linija;
-- tip naprave ali sklopa;
-- tehnološka številka;
-- izvorno ime;
-- pričakovano ciljno ime;
-- član sklopa;
-- pričakovani UDT tip;
-- obveznost člana;
-- opomba;
-- izvorna datoteka, list in vrstica;
-- stanje veljavnosti reference.
-
-Program mora zaznati:
-
-- manjkajoča obvezna polja;
-- podvojene reference;
-- nasprotujoča si pravila;
-- neznane tipe sklopov;
-- vrstice, ki jih ni mogoče normalizirati;
-- razlike med lokacijami.
-
-**Rezultat faze:** program lahko za izbran sklop odgovori, kakšno stanje je pričakovano in iz katere reference ta trditev izhaja.
-
-### Faza 2 – relacijski oziroma mapping pogon
-
-Mapping pogon poveže:
-
-```text
-surovi IO tag
-→ obstoječi urejeni IO tag
-→ pričakovani urejeni IO tag
-→ UDT član
-→ UNS UDT instanca
-```
-
-Uporabljeni dokazi lahko vključujejo:
-
-- enak `opcItemPath`;
-- `sourceTagPath`;
-- UDT definicijo;
-- UDT parametre;
-- tehnološko številko;
-- obstoječo hierarhijo;
-- pravilo sklopa;
-- referenčno Excel vrstico;
-- ročno potrjeno povezavo.
-
-Stanje povezave ni samo `true` ali `false`, temveč eno od:
-
-- `EXACT`;
-- `INFERRED`;
-- `AMBIGUOUS`;
-- `MISSING`;
-- `CONFLICT`;
-- `EXTERNAL`;
-- `NOT_APPLICABLE`.
-
-Ročno potrjena povezava ima prednost pred prihodnjim samodejnim ugibanjem, vendar mora ostati sledljivo, kdo oziroma katero pravilo jo je potrdilo.
-
-**Rezultat faze:** za izbran tag ali sklop je mogoče prikazati celotno verigo, dokaze in nerešene vrzeli.
-
-### Faza 3 – formalna pravila sklopov
-
-Na podlagi resničnih primerov se formalizirajo tipi, kot so:
-
-- meritve;
-- motorji;
-- ventili;
-- regulatorji;
-- stikala;
-- filtri;
-- izpihe in podpih;
-- konusi;
-- linijske tipke;
-- custom sklopi.
-
-Za vsak tip se določi:
-
-- način prepoznave;
-- pričakovani člani;
-- obvezni in izbirni člani;
-- pravilo ciljnega imena;
-- ciljna mapa;
-- UDT tip;
-- parametri;
-- dovoljene izjeme;
-- preverjanja popolnosti.
-
-Pravila morajo biti v konfiguraciji ali ločenem domenskem modelu, ne razpršena po poljubnih delih Python kode.
-
-**Rezultat faze:** program zna za zaznan sklop izračunati njegovo pričakovano strukturo.
-
-### Faza 4 – prvi navpični rez na eni liniji
-
-Izbere se ena referenčna linija, na primer L400 ali L1600, in se zanjo dokonča celoten read-only tok:
-
-1. uvoz referenc;
-2. zaznava sklopov;
-3. povezava surovih in urejenih IO tagov;
-4. izračun pričakovanih imen;
-5. povezava UDT članov in UNS instanc;
-6. prikaz razlik;
-7. poročilo;
-8. primerjava z ročno potrjenim rezultatom.
-
-Ta linija postane **golden dataset**. Njeni pričakovani rezultati se shranijo v testne fixture, da poznejše spremembe ne pokvarijo že potrjenega vedenja.
-
-**Rezultat faze:** uporaben read-only CLI-pogon za eno resnično linijo.
-
-### Faza 5 – read-only uporabniški explorer
-
-Prvi vizualni program mora omogočati:
-
-- odpiranje delovnega projekta;
-- izbiro lokacije, providerja, linije ali veje;
-- drevesni pregled IO, UNS in UDT;
-- hitro iskanje in filtre;
-- podrobnosti izbranega taga;
-- prikaz povezovalne verige;
-- primerjavo trenutnega in pričakovanega stanja;
-- pregled referenčne Excel vrstice;
-- validator in skok iz ugotovitve na tag;
-- prikaz stanja sklopa, na primer `COMPLETE`, `INCOMPLETE`, `AMBIGUOUS` ali `CONFLICT`.
-
-V tej fazi program ne spreminja podatkov.
-
-**Rezultat faze:** prvi program, ki je uporaben za vsakodnevno razumevanje in preverjanje velike Ignition strukture.
-
-### Faza 6 – model načrtovanih sprememb
-
-Spremembe se ne zapisujejo neposredno v uvožena vozlišča. Vsaka sprememba je ločena operacija:
-
-- `CREATE_TAG`;
-- `RENAME_TAG`;
-- `MOVE_TAG`;
-- `UPDATE_PROPERTY`;
-- `UPDATE_SOURCE_PATH`;
-- `UPDATE_PARAMETERS`;
-- `DELETE_TAG`.
-
-Operacija vsebuje:
-
-- identiteto ciljnega taga;
-- staro stanje;
-- novo stanje;
-- razlog;
-- uporabljeno pravilo;
-- stopnjo zanesljivosti;
-- povezane tage;
-- posledice za reference;
-- status odobritve;
-- čas spremembe.
-
-Program mora omogočiti razveljavitev in ponovno izvedbo, ne da bi spremenil izvorni uvoz.
-
-**Rezultat faze:** varen delovni model, v katerem je mogoče načrtovati spremembe.
-
-### Faza 7 – predlogi preimenovanja in strukturiranja
-
-Program za izbrani obseg predlaga:
-
-- nova imena;
-- ciljne mape;
-- nove urejene IO tage;
-- nove UNS instance;
-- pripadajoče UDT tipe;
-- potrebne parametre;
-- spremembe `sourceTagPath`;
-- manjkajoče člane;
-- custom sklope.
-
-Nejasen primer ne sme biti samodejno potrjen. Ostane v stanju `AMBIGUOUS` ali `CONFLICT` in zahteva odločitev uporabnika.
-
-**Rezultat faze:** uporabnik lahko pripravi in potrdi celoten načrt preureditve izbrane linije ali veje.
-
-### Faza 8 – simulacija, diff in validacija končnega stanja
-
-Program vse potrjene operacije uporabi na kopiji notranjega modela in prikaže:
-
-- ustvarjene tage;
-- preimenovane in premaknjene tage;
-- spremenjene lastnosti;
-- spremenjene reference;
-- odstranjene tage;
-- nerešene elemente;
-- podvojene ciljne poti;
-- manjkajoče zahtevane člane;
-- neveljavne UDT tipe ali parametre.
-
-Validator se požene nad simuliranim končnim stanjem. Izvoz je blokiran, če obstaja kritična napaka, ki lahko ustvari izgubo podatkov ali neveljavno Ignition strukturo.
-
-**Rezultat faze:** dokazljivo veljavno načrtovano stanje pred izdelavo JSON.
-
-### Faza 9 – izvozni sistem
-
-Izvoz pride šele po stabilnem notranjem modelu sprememb in validaciji. Podpira polni ter omejeni izvoz.
-
-#### 9.1 Polni izvoz
-
-Polni izvoz vsebuje celoten izbran provider oziroma celoten obseg projekta. Uporablja se za:
-
-- varnostno kopijo;
-- večjo migracijo;
-- postavitev praznega testnega providerja;
-- primerjavo celotnega stanja;
-- obnovo.
-
-Polni izvoz ni privzet način uvajanja manjših dnevnih sprememb.
-
-#### 9.2 Izvozna košarica
-
-Uporabnik lahko med pregledovanjem dodaja elemente v **izvozno košarico** in šele pozneje izdela skupni izvoz.
-
-V košarico je mogoče dodati:
-
-- posamezen navaden tag;
-- več tagov iz iste ali različnih map;
-- mapo ali njeno vsebino;
-- celotno UDT instanco;
-- logični sklop;
-- vse potrjene spremembe izbrane linije;
-- kombinacijo elementov iz več providerjev, na primer `IO_GOS_SIE` in `UNS_GOS`.
-
-Košarica mora omogočati:
-
-- dodajanje in odstranjevanje elementov;
-- prikaz providerja in polne poti;
-- prikaz, ali je element spremenjen ali samo dodan zaradi odvisnosti;
-- samodejno odstranjevanje podvojenih izbir;
-- združevanje prekrivajočih se izborov;
-- opozorilo, če izbira vključuje celotno mapo namesto samo otrok;
-- prikaz pričakovanega obsega uvoza;
-- shranitev izbora z delovnim projektom;
-- čiščenje košarice po uspešno potrjenem izvozu.
-
-Primer: če uporabnik izbere tri IO tage in dve UNS instanci, program izdela ločene neposredno uvozljive JSON datoteke glede na provider in ciljno mapo, vendar jih združi v en izvozni paket z enim poročilom.
-
-#### 9.3 Samodejna razširitev obsega
-
-Program mora preprečiti tehnično nevarne delne izbire:
-
-- podedovanega člana UDT instance se ne izvozi kot samostojen tag;
-- izbor člana se razširi na lastniško UDT instanco;
-- UDT definicija se ne doda samodejno brez opozorila;
-- če ciljna instanca zahteva definicijo, ki v ciljnem sistemu morda ne obstaja, se doda odvisnost oziroma blokada;
-- sprememba reference lahko v košarico predlaga tudi povezani tag, vendar ga brez uporabnikove potrditve ne sme tiho dodati kot spremembo.
-
-#### 9.4 Izvozni paket
-
-En omejeni izvoz lahko vsebuje:
-
-```text
-export_2026-07-23_L1600/
-├── manifest.json
-├── IO_GOS_SIE/
-│   ├── target_01/
-│   │   └── tags.json
-│   └── target_02/
-│       └── tags.json
-├── UNS_GOS/
-│   └── target_01/
-│       └── instances.json
-└── import_report.md
-```
-
-Ignition JSON datoteke ostanejo čiste in neposredno uvozljive. Podatki, ki so namenjeni samo našemu programu, se zapišejo v `manifest.json`.
-
-Manifest za vsako datoteko vsebuje najmanj:
-
-- provider;
-- vrsto obsega;
-- izvorne polne poti;
-- zahtevani `importBasePath`;
-- korenske elemente JSON datoteke;
-- uporabljeno collision policy;
-- zahtevane UDT tipe;
-- prizadete poti;
-- baseline hash;
-- hash izvoza;
-- opozorila in vrstni red uvoza.
-
-`import_report.md` uporabniku poda točen vrstni red in ciljno mapo za vsak korak uvoza.
-
-#### 9.5 Ohranjanje polne konfiguracije
-
-Generator začne iz originalnega konfiguracijskega objekta in nanj uporabi samo potrjene spremembe. Ohraniti mora:
-
-- alarme;
-- history nastavitve;
-- bindings;
-- tag event skripte;
-- permissions;
-- podatkovni tip;
-- scaling;
-- OPC nastavitve;
-- `typeId`;
-- parametre instance;
-- lokalne UDT override;
-- vse druge znane in neznane lastnosti.
-
-Efektivna UDT definicija se ne sme razširiti v posamezno instanco, saj bi to ustvarilo nove lokalne override.
-
-#### 9.6 Ciljna lokacija pri uvozu
-
-Ignition JSON ne zagotavlja samostojne absolutne umestitve taga. Rezultat je odvisen od mape oziroma `basePath`, kamor se datoteka uvozi. Zato mora vsak omejeni izvoz:
-
-- vsebovati točen `importBasePath`;
-- ločiti tage, ki potrebujejo različne ciljne mape;
-- prikazati korenske elemente, ki bodo uvoženi;
-- preprečiti zavajajoč izvoz umetno ustvarjene celotne nadrejene strukture;
-- opozoriti, da `Overwrite` popolnoma prepiše istoimenski tag.
-
-V interaktivnem uvozu Ignition 8.1 sta za kolizije na voljo samo `Overwrite` in `Ignore`. Uvoz UDT definicij je ločen in strožje nadzorovan, ker lahko `Overwrite` odstrani člane, ki jih datoteka ne vsebuje.
-
-#### 9.7 Preverjanje enakosti
-
-Program uporablja štiri stopnje preverjanja:
-
-1. **Baseline hash** – stanje ob začetnem uvozu.
-2. **Lokalni round-trip** – ponovni uvoz generiranega JSON v lasten parser.
-3. **Affected paths diff** – dokaz, katere poti lahko izvoz spremeni.
-4. **Post-import verification** – ponovni izvoz istega obsega iz Ignitiona in primerjava s pričakovanim stanjem.
-
-Možna statusa sta:
-
-- `EXPORT_GENERATED` – datoteka je izdelana in lokalno preverjena;
-- `DEPLOYED_AND_VERIFIED` – stanje je bilo po uvozu ponovno izvoženo iz Ignitiona in potrjeno.
-
-**Rezultat faze:** varen polni ali omejeni JSON izvoz z jasnim obsegom, navodili, round-trip preverjanjem in možnostjo potrditve nameščenega stanja.
-
-### Faza 10 – produktizacija
-
-Zaključna faza vključuje:
-
-- shranjevanje in ponovno odpiranje delovnih projektov;
-- napredovanje pri dolgih operacijah;
-- možnost preklica;
-- uporabna sporočila napak;
-- stabilno delovanje nad več sto tisoč vozlišči;
-- različice podatkovne baze in migracije;
-- varnostne kopije delovnega projekta;
-- namestitveni paket za uporabo brez VS Code;
-- navodila za uporabo;
-- testni postopek za nove izdaje.
-
-## 6. Mejniki
-
-| Mejnik | Preverljiv rezultat |
-|---|---|
-| M1 | Referenčni podatki in read-only mapping za eno linijo |
-| M2 | Uporaben vizualni explorer |
-| M3 | Predlogi, potrjevanje in simulacija sprememb |
-| M4 | Izvozna košarica, omejeni izvoz in polni izvoz |
-| M5 | Round-trip in post-import preverjanje |
-| M6 | Zapakiran program za redno uporabo |
-
-## 7. Izrecno zunaj prve različice
-
-Prva različica ne vključuje:
-
-- neposrednega pisanja v aktivni produkcijski Gateway;
-- neposrednega spreminjanja PLC naslovov;
-- samodejnega odločanja pri dvoumnih povezavah;
-- splošnega urejanja UDT definicij;
-- večuporabniškega ali cloud delovanja;
-- generične podpore vsem možnim Ignition projektom;
-- tihega brisanja tagov;
-- uvoza brez predhodnega diff-a in validacije.
-
-## 8. Naslednji konkretni korak
-
-Izvozni sistem je s tem dokumentom dovolj jasno določen in ga trenutno ni treba podrobneje načrtovati.
-
-Naslednja implementacijska naloga je:
-
-> Uvoz referenčnih Excel tabel in izdelava enotnega notranjega modela pričakovanega stanja, skupaj z validacijo vrstic, sledljivostjo izvora in podporo razlikam med lokacijami.
-
-Po tej fazi sledi mapping pogon. Uporabniški vmesnik, urejanje in izvoz se začnejo šele, ko je mapping preverjen na eni resnični liniji.
-
-## 9. Merilo končnega uspeha
-
-Program je pripravljen za redno uporabo, ko lahko na resnični liniji:
-
-1. pravilno rekonstruira vse relevantne relacije;
-2. pokaže trenutno in pričakovano stanje;
-3. razloži vsako samodejno odločitev;
-4. pripravi pregledljive predloge sprememb;
-5. po potrditvi simulira veljaven rezultat;
-6. izvozi celoten provider ali samo vsebino izvozne košarice;
-7. zagotovi, da JSON ohrani vse nepoznane in nespremenjene lastnosti;
-8. dokaže natančen obseg vpliva;
-9. po uvozu v Ignition potrdi enakost nameščenega in načrtovanega stanja.
-
-## 10. Referenčna dokumentacija
-
-- [Ignition 8.1 – Exporting and Importing Tags](https://www.docs.inductiveautomation.com/docs/8.1/platform/tags/exporting-and-importing-tags)
-- [Ignition 8.1 – system.tag.importTags](https://www.docs.inductiveautomation.com/docs/8.1/appendix/scripting-functions/system-tag/system-tag-importTags)
+## 6. Arhitekturne plasti in pretok podatkov
+
+Stroga ločitev; urejanje **nikoli** ne mutira baseline vrstic.
+
+1. **Katalog virov** – registrirane uvozne datoteke (path, sha256, provider, site, kind,
+   import_session, imported_at).
+2. **Baseline (nespremenljiv)** – uvožena vozlišča: `node_uid`, `provider_uid`,
+   `parent_uid`, `sibling_index`, `depth`, `path_at_import`, `tag_type`, izvlečena iskalna
+   polja, `raw_json` (celoten originalni objekt brez otrok).
+3. **Relacije** – exact + ročne povezave z dokazom/stanjem/revizijo.
+4. **Operacije** – stage-ane spremembe (delovna kopija).
+5. **Metapodatki projekta** – ime, schema_version, obseg izbora/izvoza, undo kazalec.
+6. **Referenčni podatki (neobvezno, pozneje)** – obstoječi `reference_index` priključen
+   read-only kot kontekst/predlogi.
+7. **Generirani izhod** – izvozni paketi (datoteke na disku, izven projekta).
+
+Pretok: `import_service` (parse + provider identiteta) → **baseline** →
+`repository` (lazy drevo + podrobnosti) → `relationships` (exact + ročno) →
+`operations` (delovna kopija) → `simulation` (efektivno drevo + diff) →
+`export` (Ignition 8.3 + round-trip). Referenčni uvoznik piše **predloge** v model
+relacij (mejnik J).
+
+## 7. Temeljne invariante
+
+- Uvožene JSON datoteke so nespremenljive.
+- Originalni objekti tagov in **neznane** Ignition lastnosti se ohranijo.
+- Baseline, ročne relacije, operacije, simulirano stanje in izvoz so **ločene plasti**.
+- Urejanje nikoli ne posodobi baseline vrstic neposredno.
+- Relacija ohrani dokaz, izvor, stanje in revizijske podatke.
+- Exact dokaz in ročna potrditev sta **različna** vira relacije; ročna potrditev
+  prevlada nad prihodnjimi hevristikami; noben fuzzy zadetek ne postane tiho odobren.
+- Nerešena relacija je veljavno stanje produkta.
+- Vsaka identiteta nosi dovolj site/provider konteksta, da ni trkov.
+- Preimenovanje/premik ne uničita stabilne interne identitete vozlišča.
+- Velika drevesa se nalagajo **lazy**/paginirano; program ostane odziven pri realnem
+  obsegu Calcita.
+- Izvoz je **deterministicen** in omejen; brez pisanja v aktivni Gateway.
+- Resnični Calcit izvozi in iz njih izpeljani zaupni fixture se nikoli ne commit-ajo.
+
+## 8. Model projekta / podatkovne baze
+
+Projekt = mapa z **enim samostojnim `project.sqlite`**, ki vsebuje nespremenljiv
+posnetek baseline-a **in** ločene tabele za relacije, operacije in metapodatke.
+Prenosljiv, single-writer, enostavna varnostna kopija/obnovitev. Baseline se napolni z
+**ponovno uporabo** logike Faze 0 (`build._walk`, `model.TagRow`, `sha256_file`).
+
+Tabele (uvedene po mejnikih, glej §15):
+- `project_meta(schema_version, name, created_at, undo_cursor, export_scope_json, ...)`
+- `sources(id, path, sha256, provider_name, site, kind, import_session, imported_at)`
+- `baseline_nodes(node_uid PK, provider_uid, parent_uid, sibling_index, depth,
+  path_at_import, name, tag_type, data_type, value_source, type_id, opc_item_path,
+  opc_server, source_tag_path, raw_json, source_id)`
+- `relationships(...)` (§10)
+- `operations(...)` (§11)
+
+## 9. Model identitete tagov (preživi preimenovanje in premik)
+
+- `node_uid` dodeljen ob uvozu, **nespremenljiv**: deterministično
+  `hash(provider_uid + "\x00" + original_full_path)` (full_path je enolična znotraj
+  providerja). Preimenovanje/premik sta **operaciji**, ne mutaciji, zato se `node_uid`
+  nikoli ne spremeni; efektivna pot se izračuna z zlaganjem operacij nad baseline.
+- Ustvarjena vozlišča dobijo sintetični uid (`new:<uuid4>`), shranjen v operaciji, ne v
+  baseline.
+- `provider_uid = hash(site + "/" + provider_name + "/" + kind)`; `provider_name` se
+  razbere iz imena datoteke (koren JSON ima prazno ime).
+- Ponovni uvoz spremenjenega vira se ujema po `(provider_uid, original_full_path)` →
+  isti `node_uid`, kjer sidro še obstaja; dodano/odstranjeno se zazna; odvisne
+  relacije/operacije brez sidra se označijo **STALE** (poznejši mejnik).
+
+## 10. Model relacij in dokazov (`relationships`)
+
+Stolpci: `source_node_uid, target_node_uid, role, state, evidence_type, evidence_json,
+origin, confidence, confirmed_by, confirmed_at, created_at, updated_at, source_hashes_json`.
+
+- `role`: `RAW_TO_ORGANIZED | ORGANIZED_TO_MEMBER | MEMBER_TO_UNS_INSTANCE | GENERIC`
+- `state`: `EXACT | MANUAL_CONFIRMED | MANUAL_REJECTED | UNRESOLVED | AMBIGUOUS | STALE | CONFLICT`
+- `evidence_type`: `OPC_ITEM_PATH_EXACT | SOURCE_TAG_PATH_RESOLVED |
+  UDT_DEFINITION_MEMBERSHIP | INSTANCE_TYPE | MANUAL`
+- `origin`: `AUTO_EXACT | MANUAL | SUGGESTION`
+
+Prihodnje hevristike pišejo **`SUGGESTION`** vrstice v ta model; nikoli ga ne obidejo in
+nikoli samodejno ne odobrijo. `MANUAL_CONFIRMED` prevlada nad predlogi. Veljavnost se
+vodi proti trenutnim hash-om virov.
+
+**Meje dokaznih virov** (dokumentirano): enako **ime samo po sebi NI** exact dokaz;
+deljen `opcItemPath` je legitimno ne-enolичен; `sourceTagPath` zahteva razrešitev
+providerja; članstvo v UDT zahteva predhodno razrešeno dedovanje.
+
+## 11. Model operacij delovne kopije (`operations`)
+
+Stolpci: `seq, op_type, target_node_uid, payload_json, original_json, status, reason,
+created_by, created_at, depends_on_json, conflict_info`.
+
+Za vsako operacijo (ciljna identiteta / originalno stanje / zahtevano / validacija /
+prizadeti / inverz):
+
+| op_type | payload | validacija | prizadeti | inverz |
+|---|---|---|---|---|
+| `CREATE_TAG` / `CREATE_FOLDER` / `CREATE_UDT_INSTANCE` | `{parent_uid,name,tagType,props}` (target `new:uid`) | starš obstaja v sim; ime enolično med efektivnimi sorojenci | – | odstrani ustvarjeno vozlišče |
+| `RENAME_TAG` | `{new_name}` | veljavni znaki; enolično ime | efektivne poti potomcev; poti-osnovane reference (→ stale) | preimenuj nazaj |
+| `MOVE_TAG` | `{new_parent_uid,new_sibling_index}` | brez premika v lastnega potomca; enolично ime v cilju | potomci | premakni nazaj |
+| `UPDATE_PROPERTY` | `{key/pointer,new_value}` | znana lastnost + tip | – | obnovi original |
+| `UPDATE_SOURCE_PATH` | `{new_value}` za `sourceTagPath` | uravnoteženi `{}` + provider token (`udt_resolver.braces_balanced`, `provider_token`) | reference | obnovi original |
+| `UPDATE_PARAMETERS` | `{params}` UDT instance | proti efektivnim parametrom tipa (`udt_resolver.effective_params`) | člani | obnovi original |
+| `DELETE_TAG` | – | **modeliran, a odložen iz prve izdaje**; tombstone; opozori na potomce/reference | potomci/reference | undelete |
+
+Vrstni red po `seq`; odvisnosti v `depends_on_json`; undo/redo = urejen dnevnik operacij
++ kazalec v `project_meta`; konflikt (npr. dva preimenovanja enega vozlišča) →
+`status=CONFLICT`.
+
+## 12. Arhitektura uporabniškega vmesnika (UI)
+
+**PySide6 / Qt.** `QTreeView` + lasten **lazy** `QAbstractItemModel`, ki otroke pridobiva
+na zahtevo (`get_children(parent_uid, limit, offset)`) in virtualizira izris; primerno za
+277k vozlišč. Branja DB izven UI niti (ali dovolj hitre omejene poizvedbe). GUI je
+izoliran v paketu `ui/`, tako da storitve ostanejo uvozljive brez Qt (headless testi z
+`pytest-qt`). Paneli se uvajajo po mejnikih (§13, §ui-scope). Prvi explorer prikaže le
+minimum, ki dokaže arhitekturo.
+
+## 13. Podrobni urejeni mejniki (A–L)
+
+Vsak mejnik vsebuje: **Cilj · Uporabniku viden rezultat · Zakaj zdaj · Odvisnosti ·
+Ponovna uporaba · Datoteke · Shema · Storitve/API · UI · Napake · Zmogljivost · Testi ·
+Kriteriji · Ne-cilji · Rollback · Meje commit-ov · Ročno preverjanje.** Za oddaljene
+mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
+
+### A. Ponovni zagon smeri in arhitektura (ta dokument)
+- **Cilj:** uskladiti roadmap, CLAUDE.md, veje, odvisnosti in sheme z editor-first smerjo.
+- **Viden rezultat:** en nepротisloven roadmap; jasen naslednji mejnik (B1).
+- **Zakaj zdaj:** brez usklajene smeri se implementacija razhaja.
+- **Odvisnosti:** –. **Ponovna uporaba:** obstoječi roadmap in CLAUDE.md.
+- **Datoteke:** `IGNITION_TAG_EDITOR_ROADMAP.md`, `CLAUDE.md` (samo Current checkpoint).
+- **Ne-cilji:** koda; migracija main. **Meja commit-a:** en docs commit na
+  `roadmap-editor-first`. **Ročno preverjanje:** roadmap se bere kot ena smer, z
+  dosledno ciljno verzijo Ignition 8.3 in brez avtomatike pred urejevalnikom.
+
+### B1. Model projekta + shema + življenjski cikel
+- **Cilj:** samostojen `project.sqlite` + migracijski tekač; create/open/save/close/recover.
+- **Viden rezultat:** ustvari/odpri/shrani prazen projekt; preživi prekinjeno sejo.
+- **Zakaj zdaj:** temelj za vse; brez UI. **Odvisnosti:** A.
+- **Ponovna uporaba:** vzorec `schema.create_schema`; `tests/conftest.py` vzorci.
+- **Datoteke:** `editor/__init__.py`, `editor/schema.py`, `editor/project.py`,
+  `tests/test_project.py`.
+- **Shema:** `project_meta`, `sources`, `baseline_nodes`, prazni `relationships`/
+  `operations`; `schema_version`.
+- **Storitve:** `create_project(path,name)`, `open_project(path)`, `save`, `close`,
+  `recover(path)`.
+- **UI:** –. **Napake:** poškodovan/zaklenjen projekt, nezdružljiva verzija sheme →
+  jasna napaka. **Zmogljivost:** odpiranje < ~200 ms.
+- **Testi:** shema/migracija naprej, create/reopen, obnovitev po prekinitvi.
+- **Kriteriji:** projekt se ustvari, zapre in znova odpre brez izgube metapodatkov.
+- **Ne-cilji:** uvoz tagov (B2). **Rollback:** projekt je ena datoteka; brisanje = čist
+  rollback. **Meja commit-a:** en commit. **Ročno:** ustvari projekt, znova odpri.
+
+### B2. Uvoz virov v baseline
+- **Cilj:** uvoz IO/UNS/UDT JSON v nespremenljiv baseline z identiteto in provenance.
+- **Viden rezultat:** projekt vsebuje označene baseline-e več providerjev/lokacij.
+- **Zakaj zdaj:** brez baseline ni kaj prikazati. **Odvisnosti:** B1.
+- **Ponovna uporaba:** `build._walk`, `build.sha256_file`, `model.TagRow`,
+  `model.classify_file`, `model._flatten_binding`.
+- **Datoteke:** `editor/import_service.py`, `tests/test_import.py`,
+  `tests/fixtures/editor/*` (sintetični mini JSON providerji).
+- **Shema:** polni `baseline_nodes` (+ `node_uid`, `provider_uid`, `sibling_index`,
+  `raw_json`), `sources`.
+- **Storitve:** `discover_sources`, `validate_source`, `import_source(project, path,
+  site)`, `list_providers`, `reimport` + stale osnova.
+- **UI:** –. **Napake:** neveljaven JSON, neznan provider vzorec, podvojen uvoz.
+  **Zmogljivost:** uvoz velike datoteke omejen v pomnilniku (kot Faza 0).
+- **Testi:** provenance, ohranjen vrstni red, provider identiteta, nespremenljivost virov
+  (sha pred==po), brezizgubnost `raw_json`.
+- **Kriteriji:** baseline enolično identificiran; viri nespremenjeni.
+- **Ne-cilji:** urejanje. **Rollback:** ponovni uvoz zgradi nov baseline; stari projekt
+  ostane. **Meja commit-a:** en commit. **Ročno:** uvozi sintetični provider, preglej štetja.
+
+### C1. Repozitorij lazy drevesa + podrobnosti (headless)
+- **Cilj:** API za lazy navigacijo in podrobnosti. **Viden rezultat:** (posredno prek UI).
+- **Zakaj zdaj:** UI potrebuje hitre omejene poizvedbe. **Odvisnosti:** B2.
+- **Ponovna uporaba:** `query.search`, `query.SEARCH_FIELDS`, `udt_resolver`.
+- **Datoteke:** `editor/repository.py`, `tests/test_repository.py`.
+- **Shema:** indeksi na `baseline_nodes(parent_uid)`, `(provider_uid)`, iskalna polja.
+- **Storitve:** `list_providers`, `get_children(parent_uid,limit,offset)`, `get_parent`,
+  `breadcrumbs`, `full_path`, `node_details(raw+effective)`, `child_count`.
+- **UI:** –. **Napake:** neznan uid. **Zmogljivost:** `get_children` < ~150 ms.
+- **Testi:** lazy paging, breadcrumbs, štetja, deterministicen vrstni red.
+- **Kriteriji:** noben klic ne naloži celega drevesa. **Ne-cilji:** izris.
+- **Meja commit-a:** en commit. **Ročno:** poženi poizvedbe iz Python REPL.
+
+### C2. PySide6 lupina + lazy provider drevo
+- **Cilj:** minimalni UI, ki dokaže arhitekturo. **Viden rezultat:** odpri projekt, razširi
+  velika drevesa brez zmrznitve.
+- **Zakaj zdaj:** prva povratna zanka. **Odvisnosti:** C1.
+- **Ponovna uporaba:** `editor/repository.py`.
+- **Datoteke:** `ui/__init__.py`, `ui/app.py`, `ui/main_window.py`,
+  `ui/models/tree_model.py`, `tests/test_ui_tree_model.py`.
+- **Odvisnost:** dodaj **PySide6** (runtime), **pytest-qt** (dev).
+- **Storitve:** `TreeModel(QAbstractItemModel)` nad `repository`.
+- **UI:** zagonski zaslon (open project) + provider drevo. **Napake:** manjkajoč projekt.
+  **Zmogljivost:** prvi nivo < ~1 s; razširitev < ~150 ms.
+- **Testi:** model headless (pytest-qt): rowCount/index/lazy fetch.
+- **Kriteriji:** navigacija realnega 277k providerja brez nalaganja vsega. **Ne-cilji:**
+  iskanje/inspektor. **Rollback:** GUI izoliran; storitve nedotaknjene. **Meja commit-a:**
+  en commit. **Ročno:** odpri projekt, razširi globoko vejo.
+
+### C3. Iskanje in filtri
+- **Cilj:** iskanje po polju + provider/site/tag_type + štetja. **Odvisnosti:** C2.
+- **Ponovna uporaba:** `query.search`, `SEARCH_FIELDS`.
+- **Datoteke:** `ui/search_panel.py`, razširi `editor/repository.py`, testi.
+- **UI:** iskalno polje + filtri + rezultati (paginirano). **Zmogljivost:** count + prva
+  stran < ~500 ms na 277k. **Testi:** filtrirano štetje, mode exact/prefix/contains.
+- **Kriteriji:** iskanje vrne štetje in vzorec brez izpisa tisočev. **Meja commit-a:** en commit.
+
+### C4. Tag inspektor + UDT kontekst  → **Explorer MVP zaključen**
+- **Cilj:** prikaz raw+efektivnih lastnosti, OPC, sourceTagPath, typeId, parametrov,
+  provenance; UDT efektivni člani/parametri. **Odvisnosti:** C3.
+- **Ponovna uporaba:** `udt_resolver.effective_members/params/inheritance_chain`,
+  `query.get_raw`.
+- **Datoteke:** `ui/inspector_panel.py`, `ui/udt_panel.py`, razširi `repository`, testi.
+- **UI:** inspektor + UDT panel, sinhroniziran z izborom v drevesu. **Testi:** node_details,
+  efektivna vs uvožena konfiguracija. **Kriteriji:** izbran tag pokaže vse zahtevane
+  atribute + izvor. **Ne-cilji:** urejanje. **Meja commit-a:** en commit. **Ročno:**
+  klikni UDT instanco, preveri efektivne člane.
+
+### D1. Odkrivanje exact relacij
+- **Cilj:** samo dokazljive relacije + eksplicitno UNRESOLVED. **Odvisnosti:** C4.
+- **Ponovna uporaba:** `udt_resolver`, `opc_multiplicity` vzorci iz Faze 0.
+- **Datoteke:** `editor/relationships.py`, `tests/test_relationships.py`.
+- **Shema:** `relationships` (§10). **Storitve:** `discover_exact(project)`,
+  `query_relationships`, evidenca po `evidence_type`.
+- **Napake:** dvoumni kandidati → `AMBIGUOUS`, ne ugibaj. **Testi:** vsak dokazni tip +
+  meje (ime samo ni dokaz; deljen opcItemPath). **Kriteriji:** nič hevristik; nerešeno je
+  vidno. **Ne-cilji:** predlogi. **Meja commit-a:** en commit.
+
+### D2. Panel verige relacij
+- **Cilj:** prikaz `raw IO → organized IO → UDT član → UNS instanca` + dokaz + UNRESOLVED.
+  **Odvisnosti:** D1. **Datoteke:** `ui/relationship_panel.py`, testi modela. **Kriteriji:**
+  za izbran tag se pokaže veriga in dokazi; vrzeli so vidne. **Meja commit-a:** en commit.
+
+### E1. Storitev ročnih relacij
+- **Cilj:** create/confirm/reject/remove; `MANUAL_CONFIRMED` prevlada; trajno; veljavnost
+  proti hash-om. **Odvisnosti:** D1. **Datoteke:** razširi `editor/relationships.py`, testi.
+  **Testi:** trajnost + prednost pred (bodočimi) predlogi. **Kriteriji:** ročne relacije
+  preživijo ponovno odprtje. **Meja commit-a:** en commit.
+
+### E2. UI urejevalnik ročnih povezav
+- **Cilj:** ročno poveži/razveži iz UI; ponovno odprtje ohrani. **Odvisnosti:** E1, D2.
+  **Datoteke:** `ui/manual_link_editor.py`, testi. **Meja commit-a:** en commit.
+
+### F1. Model in storitve operacij
+- **Cilj:** `CREATE_*`/`RENAME`/`MOVE`/`UPDATE_PROPERTY`/`UPDATE_SOURCE_PATH`/
+  `UPDATE_PARAMETERS` (+ `DELETE` modeliran, odložen); validate/order/apply-in-sim/invert.
+  **Odvisnosti:** B2 (identiteta), C1. **Ponovna uporaba:** `udt_resolver.braces_balanced`,
+  `provider_token`, `effective_params`.
+- **Datoteke:** `editor/operations.py`, `tests/test_operations.py`.
+- **Shema:** `operations` (§11). **Testi:** validacija po tipu + round-trip inverz; brez
+  mutacije baseline. **Kriteriji:** vsaka operacija ima validacijo in inverz. **Ne-cilji:**
+  izvedba DELETE. **Meja commit-a:** en commit (ali dva: create/rename/move, nato update*).
+
+### F2. Panel stage-anih sprememb + urejevalnik operacij
+- **Cilj:** operacije vidno ločene od baseline; ustvarjanje operacij iz UI. **Odvisnosti:**
+  F1. **Datoteke:** `ui/staged_changes_panel.py`, `ui/operation_editor.py`, testi.
+  **Meja commit-a:** en commit.
+
+### G1. Storitvi SimTree + diff
+- **Cilj:** efektivno drevo (lazy) iz baseline+operacij; strukturiran diff. **Odvisnosti:**
+  F1. **Datoteke:** `editor/simulation.py`, `tests/test_simulation.py`.
+- **Storitve:** `sim_children(node_uid)`, `sim_details`, `diff(project)` (added/renamed/
+  moved/property-changed/reference-changed/deleted). **Testi:** pravilnost sim + kategorije
+  diff-a; baseline nespremenjen. **Kriteriji:** sim ne mutira baseline. **Meja commit-a:**
+  en commit.
+
+### G2. Undo/redo + trajnost
+- **Cilj:** kazalec dnevnika operacij; save/reopen obnovi baseline+relacije+operacije+kazalec.
+  **Odvisnosti:** G1. **Datoteke:** razširi `operations.py`, `project.py`, testi.
+  **Testi:** undo/redo, zvestoba ponovnega odprtja. **Meja commit-a:** en commit.
+
+### G3. Pogled simuliranega drevesa + diff UI + validacija  → **Editor MVP zaključen**
+- **Cilj:** vizualni sim + before/after diff + validacijske ugotovitve nad sim.
+  **Odvisnosti:** G2. **Ponovna uporaba:** `validate.validate` (prilagojen na sim).
+  **Datoteke:** `ui/sim_tree_view.py`, `ui/diff_panel.py`, `ui/validation_panel.py`, testi.
+  **Meja commit-a:** en commit.
+
+### H1. Omejen Ignition 8.3 izvoz
+- **Cilj:** izračun obsega + deterministicna serializacija + manifest. **Odvisnosti:** G1.
+- **Datoteke:** `editor/export.py`, `tests/test_export.py`.
+- **Storitve:** `compute_export_scope(selection)`, `serialize_ignition_json(scope)`,
+  `write_package(...)`. **Napake:** UDT definicijski izvoz strožji (Overwrite lahko
+  odstrani člane). **Testi:** deterministicnost + **brezizgubna no-op rekonstrukcija** na
+  omejenih realnih podatkih. **Kriteriji:** izvoz je deterministicen in omejen. **Meja
+  commit-a:** en commit.
+
+### H2. Round-trip preverjanje + izvozni UI  → **Prvi celoten navpični rez**
+- **Cilj:** ponovni uvoz izvoza v parser in primerjava z načrtovanim sim poddrevesom →
+  `EXPORT_VERIFIED`. **Odvisnosti:** H1. **Datoteke:** razširi `export.py`,
+  `ui/export_panel.py`, testi. **Testi:** round-trip vozlišče-za-vozlišče (brez naših
+  metapodatkov). **Kriteriji:** izvoz round-trip-a natančno. **Meja commit-a:** en commit.
+
+### I. Prva ročno dokončana linija
+- **Cilj:** eno realno linijo pelji end-to-end skozi urejevalnik; ustvari **nezaupno,
+  sintetizirano golden** vedenjsko specifikacijo kot regresijske fixture. **Odvisnosti:** H2.
+  **Ne-cilji:** avtomatika. **Meja commit-a:** golden fixtures + test.
+
+### J. Integracija referenčnih podatkov
+- **Cilj:** obstoječi `analyzer/reference` priključi kot neobvezen kontekst; piše
+  **`SUGGESTION`** vrstice v model relacij (nikoli samodejno odobreno). **Odvisnosti:** I.
+  **Ponovna uporaba:** celoten `analyzer/reference`.
+
+### K. Samodejno grupiranje in mapiranje
+- **Cilj:** najprej deterministicna pravila (predlogi), nato **omejeno** približno ujemanje
+  — šele po golden datasetu. **Odvisnosti:** J.
+
+### L. Napredna validacija + produkcijski izvoz + pakiranje
+- **Cilj:** polni/omejeni izvoz, post-import preverjanje iz Ignitiona, PyInstaller pakiranje.
+  **Odvisnosti:** K.
+
+**UI paneli po mejnikih:** zagon/open (B1/C2), import/source manager (B2), provider/site
+izbirnik (C2), lazy drevo (C2), povezana IO/UNS/UDT navigacija (C2–C4), iskanje/filtri
+(C3), inspektor (C4), veriga relacij (D2), urejevalnik ročnih povezav (E2), panel
+stage-anih sprememb + urejevalnik operacij (F2), before/after diff + simulirano drevo +
+validacija (G3), izbor obsega izvoza + rezultat/round-trip (H1/H2).
+
+## 14. Inventar funkcij/storitev
+
+Modul · vhod → izhod · meja trajnosti.
+
+- **Project** (`editor/project.py`): create/open/save/close/recover · path/name → ročica
+  projekta · lasti `project.sqlite`.
+- **Import** (`editor/import_service.py`): discover/validate/fingerprint/import, reimport +
+  stale · datoteke/site → `sources` + `baseline_nodes` · piše baseline (po uvozu
+  nespremenljiv).
+- **Repository** (`editor/repository.py`): list_providers/roots, get_children, get_parent,
+  breadcrumbs, full_path, search + filtrirano štetje, node_details, raw/effective · uid/
+  filtri → vrstice · **read-only** nad baseline+ops.
+- **UDT** (ponovna uporaba `analyzer/udt_resolver.py`): efektivni člani/parametri, dedovanje
+  · site/typeId → množice · read-only.
+- **Relationships** (`editor/relationships.py`): discover_exact, query, confirm, reject,
+  remove · uid/dokaz → `relationships` · piše relacije.
+- **Operations** (`editor/operations.py`): create, validate, order, apply-in-sim, invert ·
+  payload → `operations` + validacija · piše operacije.
+- **Simulation** (`editor/simulation.py`): sim_children/details, diff, undo/redo ·
+  baseline+ops → efektivni pogled/diff · bere baseline+ops, piše le undo kazalec.
+- **Validation** (ponovna uporaba `analyzer/validate.py`, prilagojen na sim) · sim →
+  ugotovitve · read-only.
+- **Export** (`editor/export.py`): scope calc, Ignition 8.3 serialize, round-trip compare ·
+  izbor → JSON paket + preverjanje · piše samo izhodne datoteke.
+
+## 15. Zaporedje shem in migracij (`project.sqlite`, `schema_version` + tekač)
+
+- **B1:** `project_meta`, `sources`, `baseline_nodes`, `schema_version` (+ prazni
+  `relationships`/`operations`).
+- **B2:** napolni `baseline_nodes` (+ `node_uid`, `provider_uid`, `sibling_index`,
+  `raw_json`).
+- **D1:** `relationships`. **F1:** `operations`. **G2:** undo kazalec v `project_meta`.
+
+Vsaka migracija je naprej-usmerjena, verzionirana, testirana; odpiranje starejšega
+projekta požene čakajoče migracije; baseline se s poznejšimi migracijami **nikoli** ne
+prepiše.
+
+## 16. Testna strategija (sintetično commit-ano; realni Calcit ignoriran)
+
+Enotski (identiteta/pot/lastnost/pravila operacij) · shema & migracije · regresija parserja
+· lazy poizvedbe · dokazi relacij · trajnost ročnih relacij · delovna kopija + inverz ·
+simulacija & diff · deterministicna serializacija · **Ignition 8.3 round-trip** · UI-model
+(`pytest-qt`, headless) · omejeni **zmogljivostni** testi z velikim sintetičnim drevesom ·
+ročne provere na ignoriranih realnih vhodih · **vseh 64 obstoječih testov ostane zelenih**.
+Ponovno uporabi vzorce iz `tests/conftest.py` in `tests/fixtures/`. Sintetični fixture se
+commit-ajo; realni Calcit podatki ostanejo ignorirani.
+
+## 17. Cilji zmogljivosti
+
+- Odpiranje projekta in izris prvega nivoja drevesa < ~1 s.
+- Razširitev poljubnega vozlišča < ~150 ms prek paginiranega `get_children`.
+- Iskanje vrne štetje + prvo stran < ~500 ms na 277k vozliščih.
+- UI nikoli ne naloži celotnega drevesa.
+- Izvoz omejenega poddrevesa deterministicen in omejen.
+
+## 18. Varnost in ravnanje z zaupnimi podatki
+
+Brez pisanja v `data/raw`; brez neposrednega pisanja v Gateway/PLC; resnični Calcit izvozi
+in iz njih izpeljani zaupni fixture ostanejo git-ignorirani; projektne datoteke iz realnih
+podatkov so zaupne (se ne commit-ajo); commit-ajo se samo sintetični fixture.
+
+## 19. Tveganja in blaženja
+
+- **Brezizgubnost rekonstrukcije nepreverjena** → round-trip test na omejenih realnih
+  podatkih pred zanašanjem na izvoz (H1).
+- **UI zatikanje pri 277k** → obvezen lazy model + paging + zmogljivostni testi.
+- **Qt odvisnost/pakiranje** → GUI izoliran v `ui/`, storitve headless, pakiranje odloženo.
+- **Stabilna identiteta pri ponovnem uvozu** → deterministicen `node_uid`, operacije ga ne
+  spreminjajo, STALE označevanje.
+- **Zdrs nazaj v hevristike** → avtomatika je za navpičnim rezom in golden datasetom.
+
+## 20. Definicija MVP
+
+- **Explorer MVP** (konec C): odpri projekt · uvozi/odpri indeksirane vire · navigiraj
+  velika provider drevesa · išči · preglej tage + UDT kontekst.
+- **Editor MVP** (konec G): exact + ročne relacije · stage-ane ročne spremembe · simulirano
+  drevo · diff · undo/redo · save/reopen.
+
+## 21. Definicija prvega celotnega navpičnega reza
+
+Konec **H**: Editor MVP + omejen Ignition 8.3 JSON izvoz + deterministicno round-trip
+preverjanje + en majhen, ročno preverjen realni primer.
+
+## 22. Odložena funkcionalnost
+
+Izvedba `DELETE_TAG`; referenčni predlogi (J); grupiranje/fuzzy ujemanje (K); polni
+produkcijski izvoz + post-import preverjanje iz Ignitiona + pakiranje (L); večuporabniško/
+cloud.
+
+## 23. Merljivi kriteriji sprejemljivosti
+
+- Explorer MVP navigira realne 277k-node providerje znotraj ciljev zmogljivosti.
+- Baseline dokazljivo nespremenljiv (hash pred==po) in ločen od operacij.
+- Exact relacije prikažejo dokaz in nerešene vrzeli.
+- Ročne povezave in operacije preživijo ponovno odprtje.
+- Sim + diff nikoli ne mutirata baseline.
+- Omejen izvoz je deterministicen in round-trip-a vozlišče-za-vozlišče.
+- Vseh 64 obstoječih + novi testi so zeleni; čist klon požene testno zbirko s commit-animi
+  sintetičnimi fixturi.
+
+## 24. Takojšnji naslednji implementacijski mejnik
+
+**B1 – Model projekta + shema `project.sqlite` + življenjski cikel** (create/open/save/
+close/recover) z migracijskim tekačem. Brez UI; odklene vse nadaljnje. Izvede se **šele po
+ločeni instrukciji**.
+
+## 25. Kontrolni seznam po mejnikih za Claude Code
+
+Za vsak mejnik: (1) Plan Mode – preglej repo + relevantne teste; (2) potrdi obseg = točno
+en mejnik; (3) implementiraj s ponovno uporabo obstoječih komponent (§14); (4) dodaj/posodobi
+teste; (5) poženi fokusirane in nato celotne relevantne teste; (6) preglej diff; (7) commit
+po eni koherentni meji (trailer `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`);
+(8) push trenutne ne-main veje; (9) poročaj hash, vejo, teste, naslednji mejnik; (10) ne
+začenjaj naslednjega mejnika brez ločene instrukcije. Nikoli force-push; nikoli commit
+realnih Calcit podatkov.
+
+## 26. Referenčna dokumentacija
+
+- [Ignition 8.3 – Exporting and Importing Tags](https://www.docs.inductiveautomation.com/docs/8.3/platform/tags/exporting-and-importing-tags)
+- [Ignition 8.3 – system.tag scripting](https://www.docs.inductiveautomation.com/docs/8.3/appendix/scripting-functions/system-tag)
