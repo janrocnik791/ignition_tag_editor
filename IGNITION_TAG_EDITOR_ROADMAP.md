@@ -228,6 +228,7 @@ Kriteriji · Ne-cilji · Rollback · Meje commit-ov · Ročno preverjanje.** Za 
 mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
 
 ### A. Ponovni zagon smeri in arhitektura (ta dokument)
+- **Status:** zaključeno.
 - **Cilj:** uskladiti roadmap, CLAUDE.md, veje, odvisnosti in sheme z editor-first smerjo.
 - **Viden rezultat:** en nepротisloven roadmap; jasen naslednji mejnik (B1).
 - **Zakaj zdaj:** brez usklajene smeri se implementacija razhaja.
@@ -238,6 +239,11 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   dosledno ciljno verzijo Ignition 8.3 in brez avtomatike pred urejevalnikom.
 
 ### B1. Model projekta + shema + življenjski cikel
+- **Status:** zaključeno. Implementirano v `editor/schema.py` (v1 shema + `migrate` prek
+  `PRAGMA user_version`), `editor/project.py` (`create_project`/`open_project`/`save`/
+  `close`/`recover`), testi `tests/test_project.py`. Shema v1 ustvari `project_meta`,
+  `sources`, `baseline_nodes`; tabeli `relationships`/`operations` prideta s svojima
+  migracijama v D1/F1 (brez scaffoldinga v B1).
 - **Cilj:** samostojen `project.sqlite` + migracijski tekač; create/open/save/close/recover.
 - **Viden rezultat:** ustvari/odpri/shrani prazen projekt; preživi prekinjeno sejo.
 - **Zakaj zdaj:** temelj za vse; brez UI. **Odvisnosti:** A.
@@ -523,9 +529,10 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**B1 – Model projekta + shema `project.sqlite` + življenjski cikel** (create/open/save/
-close/recover) z migracijskim tekačem. Brez UI; odklene vse nadaljnje. Izvede se **šele po
-ločeni instrukciji**.
+**B2 – Uvoz virov v baseline.** Ponovna uporaba `build._walk` / `model.TagRow` /
+`sha256_file` za uvoz IO/UNS/UDT JSON v nespremenljiv `baseline_nodes` (z `node_uid`,
+`provider_uid`, `sibling_index`, `raw_json`) in polnjenje `sources`. Brez UI. Izvede se
+**šele po ločeni instrukciji**. (B1 je zaključen.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

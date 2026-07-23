@@ -188,12 +188,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint A — editor-first roadmap reset. Retained supporting
-  infrastructure: Phase 0 (`analyzer/` read-only analytical foundation) and the reference
-  importer (`analyzer/reference/`, `reference_index.sqlite`, `ref-*` commands).
-- **Active / next:** Checkpoint B1 — the self-contained `project.sqlite` model, schema,
-  and lifecycle (create/open/save/close/recover) with a migration runner. No UI.
-- **Prerequisite state:** `main` is the authoritative baseline; the test suite passes; no
-  `editor/` package or GUI exists yet.
-- **Branch:** implement B1 on a focused branch off `main`.
+- **Last completed:** Checkpoint B1 — the self-contained `project.sqlite` model, schema,
+  migration runner, and lifecycle (`editor/schema.py`, `editor/project.py`,
+  `tests/test_project.py`). Also done: Checkpoint A (editor-first roadmap reset). Retained
+  supporting infrastructure: Phase 0 (`analyzer/`) and the reference importer
+  (`analyzer/reference/`, `ref-*` commands).
+- **Active / next:** Checkpoint B2 — source import into the immutable baseline
+  (`baseline_nodes` + `sources`), reusing the Phase 0 parse/walk (`build._walk`,
+  `model.TagRow`, `sha256_file`). No UI.
+- **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
+  provides the project lifecycle (schema v1: `project_meta`, `sources`, `baseline_nodes`);
+  the test suite passes (76 tests); no import logic, GUI, `relationships`, or `operations`
+  tables exist yet.
+- **Branch:** B1 implemented on `checkpoint-b1` (stacked on `docs-claude-operating-manual`);
+  implement B2 on a focused branch once B1 lands on `main`.
 - **Blocker:** none.
