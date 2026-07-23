@@ -1,0 +1,14 @@
+# Pravila obveznih/opcijskih clanov UDT tipov.
+#
+# Validator NE ugiba, kateri clani so obvezni. Dokler tu ni pravila, je
+# odsotnost clana najvec INFO (INSTANCE_OVERRIDE_SHAPE / OPTIONAL_MEMBER_ABSENT).
+#
+# Format (odkomentiraj in prilagodi, ko bodo pravila potrjena):
+#
+# Siemens/Meritev:
+#   required: [Meritev]
+#   optional: [SetPoint, Simulacija, "Simulacijska vrednost"]
+#
+# Siemens/Motor:
+#   required: [Deluje, Napaka]
+#   optional: [Start, Stop]

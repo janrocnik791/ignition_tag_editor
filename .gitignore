@@ -1,0 +1,40 @@
+@'
+# Internal/project data
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Secrets and local settings
+.env
+.env.*
+*.key
+*.pem
+.claude/settings.local.json
+
+# Generated output
+build/
+dist/
+reports/
+exports/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+'@ | Set-Content .gitignore
