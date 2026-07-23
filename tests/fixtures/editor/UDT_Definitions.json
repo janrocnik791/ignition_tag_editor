@@ -1,0 +1,14 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "MotorUDT",
+      "tagType": "UdtType",
+      "tags": [
+        { "name": "Run", "tagType": "AtomicTag", "dataType": "Boolean" },
+        { "name": "Speed", "tagType": "AtomicTag", "dataType": "Float4" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "Area1",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Motor1_Run",
+          "tagType": "AtomicTag",
+          "dataType": "Boolean",
+          "valueSource": "opc",
+          "opcServer": "Ignition OPC UA Server",
+          "opcItemPath": "ns=1;s=[PLC]M1.Run"
+        },
+        {
+          "name": "Motor1_Speed",
+          "tagType": "AtomicTag",
+          "dataType": "Float4",
+          "valueSource": "opc",
+          "opcServer": "Ignition OPC UA Server",
+          "opcItemPath": "ns=1;s=[PLC]M1.Speed"
+        }
+      ]
+    },
+    {
+      "name": "Area2",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Ref",
+          "tagType": "AtomicTag",
+          "dataType": "Float4",
+          "valueSource": "reference",
+          "sourceTagPath": {
+            "bindType": "Tag",
+            "binding": "[~]Area1/Motor1_Speed"
+          }
+        }
+      ]
+    }
+  ]
+}
