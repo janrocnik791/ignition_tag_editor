@@ -449,6 +449,15 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   izvedba DELETE. **Meja commit-a:** en commit (ali dva: create/rename/move, nato update*).
 
 ### F2. Panel stage-anih sprememb + urejevalnik operacij
+- **Status:** zaključeno. Nova stran `Stage-ane spremembe` združuje urejevalnik
+  operacije in trajni pregled dnevnika. Izbor v drevesu/iskanju nastavi target; obrazec
+  se prilagodi `CREATE_*`, `RENAME`, `MOVE`, property, source-path, parameter in
+  odloženi delete operaciji. Premik uporablja eksplicitno iskanje ciljnega starša,
+  JSON vrednosti se preverijo pred zapisom. Tabela pokaže seq, `VALID`/`CONFLICT`/
+  `DEFERRED`, target, payload in auditnega uporabnika; detail pokaže tudi original,
+  odvisnosti in konflikt. Dovoljeni reorder in varna odstranitev ohranita odvisnosti,
+  odstranitev konflikta pa ponovno aktivira edino preostalo odločitev. Ponovno odprtje
+  ohrani prikaz, baseline ostane nespremenjen. Celotna zbirka: 193 zelenih testov.
 - **Cilj:** operacije vidno ločene od baseline; ustvarjanje operacij iz UI. **Odvisnosti:**
   F1. **Datoteke:** `ui/staged_changes_panel.py`, `ui/operation_editor.py`, testi.
   **Meja commit-a:** en commit.
@@ -615,12 +624,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**F2 – Panel stage-anih sprememb in urejevalnik operacij.** Dodaj
-`ui/staged_changes_panel.py` ter `ui/operation_editor.py`. Uporabnik mora iz izbranega
-baseline vozlišča ustvariti validirano F1 operacijo, pregledati njen payload/original,
-videti `VALID`/`CONFLICT`/`DEFERRED` stanje in urediti dovoljeni vrstni red. Baseline in
-simulirani pogled morata ostati jasno ločena. (B1, B2, C1–C4, D1–D2, E1–E2 in F1 so
-zaključeni.)
+**G1 – Storitvi SimTree in diff.** Nad nespremenljivim baselineom in veljavnim F1
+dnevnikom dodaj lazy efektivno drevo, `sim_children`, `sim_details` in strukturiran
+`diff(project)` za added/renamed/moved/property/reference/deleted kategorije. Branje
+simulacije ne sme pisati ne v baseline ne v dnevnik operacij. (B1, B2, C1–C4, D1–D2,
+E1–E2 in F1–F2 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

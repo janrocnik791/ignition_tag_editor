@@ -197,19 +197,20 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint F1 — schema v4 adds the persistent ordered `operations`
-  journal. Services validate, order, apply in-memory, and invert all planned CREATE,
-  rename, move, property, source-path, and UDT-parameter operations; `DELETE_TAG` is
-  persisted as `DEFERRED`. Dependency and conflict states are explicit, specialized
-  updates cannot bypass their validators, and writes never mutate baseline rows. On a
-  277,607-node project, targeted operation validation/persistence is ~0.0027 s. Also
-  done: A, B1, B2, C1, C2, C3, C4, D1, D2, E1, E2; Explorer MVP remains complete.
-- **Active / next:** Checkpoint F2 — staged changes panel and operation editor.
+- **Last completed:** Checkpoint F2 — the synchronized `Stage-ane spremembe` workspace
+  creates validated F1 operations from the selected node and shows the persistent journal
+  with sequence, status, target, payload, actor, original snapshot, dependencies, and
+  conflicts. Move uses explicit destination search; JSON inputs are validated. Safe
+  reorder/removal preserves dependencies and resolves conflict groups, while project
+  reopen restores the view and baseline remains unchanged. Also done: A, B1, B2, C1,
+  C2, C3, C4, D1, D2, E1, E2, F1; Explorer MVP remains complete.
+- **Active / next:** Checkpoint G1 — lazy SimTree and structured diff services.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (187 tests);
-  the GUI can inspect and manually curate relationships but does not yet expose operations.
-- **Branch:** F1 implemented on `checkpoint-f1` from the merged E2 baseline in
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (193 tests);
+  the GUI exposes both relationship curation and staged operations, but not simulated
+  tree/diff views yet.
+- **Branch:** F2 implemented on `checkpoint-f2` from the merged F1 baseline in
   `origin/main`.
 - **Blocker:** none.
