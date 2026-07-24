@@ -31,8 +31,14 @@ from .relationships import (  # noqa: F401
     RELATIONSHIP_ROLES,
     RELATIONSHIP_STATES,
     RelationshipError,
+    confirm_relationship,
+    create_manual_relationship,
     discover_exact,
     query_relationships,
+    refresh_relationship_validity,
+    reject_relationship,
+    relationship_validity,
+    remove_manual_relationship,
 )
 from .repository import (  # noqa: F401
     MAX_SEARCH_PAGE_SIZE,

@@ -404,6 +404,14 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   za izbran tag se pokaže veriga in dokazi; vrzeli so vidne. **Meja commit-a:** en commit.
 
 ### E1. Storitev ročnih relacij
+- **Status:** zaključeno. `editor/relationships.py` podpira neposredno ustvarjanje ter
+  potrditev, zavrnitev in logično odstranitev relacij. Vsaka ročna odločitev je ločena
+  `MANUAL` vrstica z akterjem, časom, opombo in naraščajočo auditno zgodovino, zato
+  avtomatski dokaz ostane nedotaknjen. Aktivna ročna odločitev ima prednost pred
+  avtomatskimi relacijami in prihodnjimi sugestijami; odstranitev ohrani audit ter vrne
+  prednost osnovni relaciji. Shranjeni hashi virov omogočajo preverjanje veljavnosti,
+  označitev `STALE` in obnovitev prejšnjega stanja, ko se vsebina povrne. Celotna zbirka:
+  163 zelenih testov.
 - **Cilj:** create/confirm/reject/remove; `MANUAL_CONFIRMED` prevlada; trajno; veljavnost
   proti hash-om. **Odvisnosti:** D1. **Datoteke:** razširi `editor/relationships.py`, testi.
   **Testi:** trajnost + prednost pred (bodočimi) predlogi. **Kriteriji:** ročne relacije
@@ -590,11 +598,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**E1 – Storitev ročnih relacij.** Razširi `editor/relationships.py` z operacijami
-create/confirm/reject/remove, trajnim auditom in preverjanjem veljavnosti proti hash-om
-virov. `MANUAL_CONFIRMED` mora prevladati nad prihodnjimi predlogi. Ne dodajaj UI
-urejevalnika iz E2. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1–C4 in D1–D2
-so zaključeni.)
+**E2 – UI urejevalnik ročnih povezav.** Dodaj `ui/manual_link_editor.py`, ki nad
+zaključenim E1 servisom omogoča ročno povezavo, potrditev, zavrnitev in razvezavo.
+Izbor kandidatov mora ostati ekspliciten, audit in veljavnost vidna, ponovno odprtje
+projekta pa mora prikazati shranjeno odločitev. (B1, B2, C1–C4, D1–D2 in E1 so
+zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

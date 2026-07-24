@@ -1,4 +1,4 @@
-"""Exact relacije nad projektnim baselineom (mejnik D1).
+"""Exact in rocne relacije nad projektnim baselineom (mejnika D1/E1).
 
 Modul uporablja samo eksplicitne Ignition dokaze iz roadmapa: enolicno enak
 ``opcItemPath``, razresljiv ``sourceTagPath``, efektivno clananje UDT definicije
@@ -49,6 +49,7 @@ MAX_RELATIONSHIP_PAGE_SIZE = 500
 _AUTO_ORIGIN = "AUTO_EXACT"
 _PROVIDER_PREFIX = re.compile(r"^\[([^\]]+)\](.*)$", re.DOTALL)
 _MAX_EVIDENCE_CANDIDATES = 100
+_MANUAL_ORIGIN = "MANUAL"
 
 
 class RelationshipError(ProjectError):
@@ -66,6 +67,61 @@ def _canonical_json(value: Any) -> str:
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def _json_object(raw: Any) -> Dict[str, Any]:
+    try:
+        value = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _require_node(project: Project, node_uid: str, label: str) -> Dict[str, Any]:
+    row = project.conn.execute(
+        "SELECT b.node_uid, b.source_id, s.sha256 "
+        "FROM baseline_nodes b JOIN sources s ON s.id = b.source_id "
+        "WHERE b.node_uid = ?",
+        (node_uid,),
+    ).fetchone()
+    if row is None:
+        raise RelationshipError(f"Neznan {label} node_uid: {node_uid}")
+    return dict(row)
+
+
+def _snapshot_source_hashes(
+    project: Project,
+    node_uids: Iterable[Optional[str]],
+) -> List[Dict[str, Any]]:
+    source_ids = set()
+    for node_uid in node_uids:
+        if node_uid is None:
+            continue
+        row = _require_node(project, node_uid, "relationship")
+        source_ids.add(row["source_id"])
+    return [
+        {
+            "source_id": row["id"],
+            "sha256": row["sha256"],
+        }
+        for row in project.conn.execute(
+            "SELECT id, sha256 FROM sources "
+            f"WHERE id IN ({','.join('?' for _ in source_ids)}) "
+            "ORDER BY id",
+            sorted(source_ids),
+        ).fetchall()
+    ] if source_ids else []
+
+
+def _manual_uid(
+    source_node_uid: str,
+    target_node_uid: Optional[str],
+    role: str,
+) -> str:
+    identity = "\x00".join(
+        (_MANUAL_ORIGIN, source_node_uid, target_node_uid or "", role)
+    )
+    return hashlib.sha1(identity.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -560,6 +616,405 @@ def discover_exact(project: Project) -> Dict[str, Any]:
     }
 
 
+def _relationship(project: Project, relationship_uid: str) -> Dict[str, Any]:
+    row = project.conn.execute(
+        "SELECT * FROM relationships WHERE relationship_uid = ?",
+        (relationship_uid,),
+    ).fetchone()
+    if row is None:
+        raise RelationshipError(
+            f"Neznan relationship_uid: {relationship_uid}"
+        )
+    return dict(row)
+
+
+def _validate_actor(actor: str) -> str:
+    if not isinstance(actor, str):
+        raise RelationshipError("Auditni uporabnik mora biti niz")
+    actor = actor.strip()
+    if not actor:
+        raise RelationshipError("Auditni uporabnik ne sme biti prazen")
+    return actor
+
+
+def _manual_upsert(
+    project: Project,
+    *,
+    source_node_uid: str,
+    target_node_uid: Optional[str],
+    role: str,
+    state: str,
+    actor: str,
+    action: str,
+    note: Optional[str] = None,
+    based_on: Optional[Dict[str, Any]] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    _validate_filter(role, RELATIONSHIP_ROLES, "role")
+    if state not in ("MANUAL_CONFIRMED", "MANUAL_REJECTED"):
+        raise RelationshipError(f"Neveljavno rocno stanje: {state}")
+    actor = _validate_actor(actor)
+    _require_node(project, source_node_uid, "source")
+    if target_node_uid is not None:
+        _require_node(project, target_node_uid, "target")
+    if (
+        target_node_uid is not None
+        and source_node_uid == target_node_uid
+    ):
+        raise RelationshipError("Rocna relacija ne sme povezati taga samega s sabo")
+
+    relationship_uid = _manual_uid(
+        source_node_uid, target_node_uid, role
+    )
+    existing = project.conn.execute(
+        "SELECT evidence_json, created_at FROM relationships "
+        "WHERE relationship_uid = ? AND origin = ?",
+        (relationship_uid, _MANUAL_ORIGIN),
+    ).fetchone()
+    evidence = _json_object(existing["evidence_json"]) if existing else {}
+    history = evidence.get("history")
+    if not isinstance(history, list):
+        history = []
+    now = _now()
+    history.append(
+        {
+            "action": action,
+            "actor": actor,
+            "at": now,
+            "state": state,
+            "note": note,
+        }
+    )
+    evidence.update(
+        {
+            "manual": True,
+            "removed": False,
+            "history": history,
+            "details": details or evidence.get("details") or {},
+        }
+    )
+    if based_on is not None:
+        evidence["based_on_relationship_uid"] = based_on[
+            "relationship_uid"
+        ]
+        evidence["based_on_evidence_type"] = based_on["evidence_type"]
+
+    source_hashes = _snapshot_source_hashes(
+        project, (source_node_uid, target_node_uid)
+    )
+    created_at = existing["created_at"] if existing else now
+    with project.conn:
+        project.conn.execute(
+            "INSERT INTO relationships ("
+            "relationship_uid, source_node_uid, target_node_uid, role, state, "
+            "evidence_type, evidence_json, origin, confidence, confirmed_by, "
+            "confirmed_at, created_at, updated_at, source_hashes_json"
+            ") VALUES (?, ?, ?, ?, ?, 'MANUAL', ?, 'MANUAL', 1.0, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(relationship_uid) DO UPDATE SET "
+            "state=excluded.state, evidence_type=excluded.evidence_type, "
+            "evidence_json=excluded.evidence_json, origin=excluded.origin, "
+            "confidence=excluded.confidence, confirmed_by=excluded.confirmed_by, "
+            "confirmed_at=excluded.confirmed_at, updated_at=excluded.updated_at, "
+            "source_hashes_json=excluded.source_hashes_json",
+            (
+                relationship_uid,
+                source_node_uid,
+                target_node_uid,
+                role,
+                state,
+                _canonical_json(evidence),
+                actor,
+                now,
+                created_at,
+                now,
+                _canonical_json(source_hashes),
+            ),
+        )
+    return _relationship(project, relationship_uid)
+
+
+def create_manual_relationship(
+    project: Project,
+    source_node_uid: str,
+    target_node_uid: str,
+    role: str,
+    created_by: str,
+    *,
+    evidence: Optional[Dict[str, Any]] = None,
+    note: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Ustvari ali ponovno potrdi neposredno rocno relacijo."""
+    if target_node_uid is None:
+        raise RelationshipError("Rocna relacija zahteva target_node_uid")
+    if evidence is not None and not isinstance(evidence, dict):
+        raise RelationshipError("evidence mora biti slovar")
+    return _manual_upsert(
+        project,
+        source_node_uid=source_node_uid,
+        target_node_uid=target_node_uid,
+        role=role,
+        state="MANUAL_CONFIRMED",
+        actor=created_by,
+        action="create",
+        note=note,
+        details=evidence,
+    )
+
+
+def confirm_relationship(
+    project: Project,
+    relationship_uid: str,
+    confirmed_by: str,
+    *,
+    candidate_node_uid: Optional[str] = None,
+    note: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Potrdi obstojeco relacijo z loceno, auditirano MANUAL vrstico."""
+    base = _relationship(project, relationship_uid)
+    if base["target_node_uid"] is None:
+        if candidate_node_uid is None:
+            raise RelationshipError(
+                "Potrditev unresolved relacije zahteva candidate_node_uid"
+            )
+        source = candidate_node_uid
+        target = base["source_node_uid"]
+    else:
+        if (
+            candidate_node_uid is not None
+            and candidate_node_uid != base["target_node_uid"]
+        ):
+            raise RelationshipError(
+                "Exact relacija ze ima cilj; candidate_node_uid ni dovoljen"
+            )
+        source = base["source_node_uid"]
+        target = base["target_node_uid"]
+    if target is None:
+        raise RelationshipError(
+            "Rocna potrditev nima ciljnega vozlisca"
+        )
+    return _manual_upsert(
+        project,
+        source_node_uid=source,
+        target_node_uid=target,
+        role=base["role"],
+        state="MANUAL_CONFIRMED",
+        actor=confirmed_by,
+        action="confirm",
+        note=note,
+        based_on=base,
+    )
+
+
+def reject_relationship(
+    project: Project,
+    relationship_uid: str,
+    rejected_by: str,
+    *,
+    note: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Zavrni obstojeco relacijo brez spreminjanja njenega izvornega dokaza."""
+    base = _relationship(project, relationship_uid)
+    return _manual_upsert(
+        project,
+        source_node_uid=base["source_node_uid"],
+        target_node_uid=base["target_node_uid"],
+        role=base["role"],
+        state="MANUAL_REJECTED",
+        actor=rejected_by,
+        action="reject",
+        note=note,
+        based_on=base,
+    )
+
+
+def remove_manual_relationship(
+    project: Project,
+    relationship_uid: str,
+    removed_by: str,
+    *,
+    note: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Logicno odstrani rocni override in ohrani njegovo auditno zgodovino."""
+    row = _relationship(project, relationship_uid)
+    if row["origin"] != _MANUAL_ORIGIN:
+        raise RelationshipError("Odstraniti je mogoce samo MANUAL relacijo")
+    actor = _validate_actor(removed_by)
+    evidence = _json_object(row["evidence_json"])
+    history = evidence.get("history")
+    if not isinstance(history, list):
+        history = []
+    now = _now()
+    history.append(
+        {
+            "action": "remove",
+            "actor": actor,
+            "at": now,
+            "state": row["state"],
+            "note": note,
+        }
+    )
+    evidence["manual"] = True
+    evidence["removed"] = True
+    evidence["history"] = history
+    with project.conn:
+        project.conn.execute(
+            "UPDATE relationships SET evidence_json = ?, confirmed_by = ?, "
+            "confirmed_at = ?, updated_at = ? WHERE relationship_uid = ?",
+            (
+                _canonical_json(evidence),
+                actor,
+                now,
+                now,
+                relationship_uid,
+            ),
+        )
+    return _relationship(project, relationship_uid)
+
+
+def _validity_from_values(
+    relationship: Dict[str, Any],
+    current_hashes: Dict[int, str],
+    *,
+    source_exists: bool,
+    target_exists: bool,
+) -> Dict[str, Any]:
+    reasons = []
+    if not source_exists:
+        reasons.append("source_node_missing")
+    if relationship.get("target_node_uid") is not None and not target_exists:
+        reasons.append("target_node_missing")
+    stored = relationship.get("source_hashes")
+    if stored is None:
+        stored = json.loads(relationship.get("source_hashes_json") or "[]")
+    for item in stored:
+        source_id = item.get("source_id")
+        if source_id not in current_hashes:
+            reasons.append(f"source_missing:{source_id}")
+        elif current_hashes[source_id] != item.get("sha256"):
+            reasons.append(f"source_hash_changed:{source_id}")
+    return {
+        "valid": not reasons,
+        "reasons": sorted(set(reasons)),
+    }
+
+
+def relationship_validity(
+    project: Project,
+    relationship_uid: str,
+) -> Dict[str, Any]:
+    """Primerjaj sidra in shranjene source hashe s trenutnim projektom."""
+    relationship = _relationship(project, relationship_uid)
+    current_hashes = {
+        row["id"]: row["sha256"]
+        for row in project.conn.execute(
+            "SELECT id, sha256 FROM sources"
+        ).fetchall()
+    }
+    source_exists = project.conn.execute(
+        "SELECT 1 FROM baseline_nodes WHERE node_uid = ?",
+        (relationship["source_node_uid"],),
+    ).fetchone() is not None
+    target_exists = (
+        relationship["target_node_uid"] is None
+        or project.conn.execute(
+            "SELECT 1 FROM baseline_nodes WHERE node_uid = ?",
+            (relationship["target_node_uid"],),
+        ).fetchone() is not None
+    )
+    return {
+        "relationship_uid": relationship_uid,
+        **_validity_from_values(
+            relationship,
+            current_hashes,
+            source_exists=source_exists,
+            target_exists=target_exists,
+        ),
+    }
+
+
+def refresh_relationship_validity(project: Project) -> Dict[str, int]:
+    """Oznaci spremenjene relacije STALE oziroma obnovi prejsnje stanje."""
+    rows = [
+        dict(row)
+        for row in project.conn.execute(
+            "SELECT r.*, "
+            "(src.node_uid IS NOT NULL) AS source_exists, "
+            "(r.target_node_uid IS NULL OR dst.node_uid IS NOT NULL) "
+            "AS target_exists "
+            "FROM relationships r "
+            "LEFT JOIN baseline_nodes src "
+            "ON src.node_uid = r.source_node_uid "
+            "LEFT JOIN baseline_nodes dst "
+            "ON dst.node_uid = r.target_node_uid "
+            "ORDER BY r.relationship_uid"
+        ).fetchall()
+    ]
+    current_hashes = {
+        row["id"]: row["sha256"]
+        for row in project.conn.execute(
+            "SELECT id, sha256 FROM sources"
+        ).fetchall()
+    }
+    changed = 0
+    stale = 0
+    restored = 0
+    now = _now()
+    for row in rows:
+        validity = _validity_from_values(
+            row,
+            current_hashes,
+            source_exists=bool(row.pop("source_exists")),
+            target_exists=bool(row.pop("target_exists")),
+        )
+        evidence = _json_object(row["evidence_json"])
+        if not validity["valid"] and row["state"] != "STALE":
+            evidence["stale"] = {
+                "previous_state": row["state"],
+                "detected_at": now,
+                "reasons": validity["reasons"],
+            }
+            with project.conn:
+                project.conn.execute(
+                    "UPDATE relationships SET state='STALE', "
+                    "evidence_json=?, updated_at=? WHERE relationship_uid=?",
+                    (
+                        _canonical_json(evidence),
+                        now,
+                        row["relationship_uid"],
+                    ),
+                )
+            changed += 1
+            stale += 1
+        elif validity["valid"] and row["state"] == "STALE":
+            stale_info = evidence.get("stale")
+            previous_state = (
+                stale_info.get("previous_state")
+                if isinstance(stale_info, dict)
+                else None
+            )
+            if previous_state in RELATIONSHIP_STATES and previous_state != "STALE":
+                evidence.pop("stale", None)
+                with project.conn:
+                    project.conn.execute(
+                        "UPDATE relationships SET state=?, evidence_json=?, "
+                        "updated_at=? WHERE relationship_uid=?",
+                        (
+                            previous_state,
+                            _canonical_json(evidence),
+                            now,
+                            row["relationship_uid"],
+                        ),
+                    )
+                changed += 1
+                restored += 1
+    return {
+        "checked": len(rows),
+        "changed": changed,
+        "stale": stale,
+        "restored": restored,
+    }
+
+
 def _validate_filter(value: Optional[str], allowed: Sequence[str], name: str) -> None:
     if value is not None and value not in allowed:
         raise RelationshipError(
@@ -629,12 +1084,75 @@ def query_relationships(
         params + [limit, offset],
     ).fetchall()
 
+    active_manual_by_base: Dict[str, Dict[str, Any]] = {}
+    active_manual_by_key: Dict[Tuple[str, Optional[str], str], Dict[str, Any]] = {}
+    for manual_row in project.conn.execute(
+        "SELECT relationship_uid, source_node_uid, target_node_uid, role, "
+        "state, evidence_json, updated_at FROM relationships "
+        "WHERE origin = 'MANUAL' ORDER BY updated_at, relationship_uid"
+    ).fetchall():
+        manual = dict(manual_row)
+        evidence = _json_object(manual["evidence_json"])
+        if evidence.get("removed") or manual["state"] == "STALE":
+            continue
+        based_on = evidence.get("based_on_relationship_uid")
+        if isinstance(based_on, str):
+            active_manual_by_base[based_on] = manual
+        key = (
+            manual["source_node_uid"],
+            manual["target_node_uid"],
+            manual["role"],
+        )
+        active_manual_by_key[key] = manual
+    current_hashes = {
+        row["id"]: row["sha256"]
+        for row in project.conn.execute(
+            "SELECT id, sha256 FROM sources"
+        ).fetchall()
+    }
+
     results = []
     for row in rows:
         item = dict(row)
         item["evidence"] = json.loads(item.pop("evidence_json"))
         item["source_hashes"] = json.loads(
             item.pop("source_hashes_json")
+        )
+        key = (
+            item["source_node_uid"],
+            item["target_node_uid"],
+            item["role"],
+        )
+        override = (
+            active_manual_by_base.get(item["relationship_uid"])
+            or active_manual_by_key.get(key)
+        )
+        if item["origin"] == _MANUAL_ORIGIN:
+            item["removed"] = bool(item["evidence"].get("removed"))
+            item["is_effective"] = (
+                not item["removed"]
+                and item["state"] != "STALE"
+                and (
+                    override is None
+                    or override["relationship_uid"]
+                    == item["relationship_uid"]
+                )
+            )
+            item["manual_override_uid"] = None
+        else:
+            item["removed"] = False
+            item["is_effective"] = override is None
+            item["manual_override_uid"] = (
+                override["relationship_uid"] if override else None
+            )
+        item["validity"] = _validity_from_values(
+            item,
+            current_hashes,
+            source_exists=item.get("source_provider") is not None,
+            target_exists=(
+                item["target_node_uid"] is None
+                or item.get("target_provider") is not None
+            ),
         )
         results.append(item)
     return {
