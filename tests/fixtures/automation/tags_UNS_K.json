@@ -1,0 +1,15 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "Line",
+      "tagType": "Folder",
+      "tags": [
+        {"name": "SameExact", "tagType": "AtomicTag", "dataType": "Boolean"},
+        {"name": "Pump01_Running", "tagType": "AtomicTag", "dataType": "Boolean"},
+        {"name": "OtherSignal", "tagType": "AtomicTag", "dataType": "Boolean"}
+      ]
+    }
+  ]
+}

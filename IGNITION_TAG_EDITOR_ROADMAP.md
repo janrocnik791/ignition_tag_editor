@@ -544,6 +544,13 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Ponovna uporaba:** celoten `analyzer/reference`.
 
 ### K. Samodejno grupiranje in mapiranje
+- **Status:** zaključeno. `editor/automation.py` najprej ustvari deterministične
+  cross-provider name in known-suffix group predloge, nato pa po želji izvede omejeno
+  `SequenceMatcher` ujemanje. Fuzzy korak zahteva prag in minimalni odmik od drugega
+  kandidata ter uveljavi trde omejitve virov, kandidatov in rezultatov. Vse vrstice so
+  neodobreni `SUGGESTION`; skupni writer preprečuje exact/manual stanje. Golden
+  specifikacija vključuje avtomatizacijska pričakovanja. Celotna zbirka:
+  226 zelenih testov.
 - **Cilj:** najprej deterministicna pravila (predlogi), nato **omejeno** približno ujemanje
   — šele po golden datasetu. **Odvisnosti:** J.
 
@@ -661,9 +668,9 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**K – Samodejno grupiranje in mapiranje.** Nad golden datasetom najprej uvedi
-deterministične predloge, nato omejeno približno ujemanje. Noben predlog se ne sme
-samodejno potrditi. (A–J zaključeni.)
+**L – Napredna validacija, produkcijski izvoz in pakiranje.** Dodaj polni obseg izvoza,
+preverjanje uporabniško priloženega Ignition re-exporta ter ponovljivo PyInstaller
+pakiranje. (A–K zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

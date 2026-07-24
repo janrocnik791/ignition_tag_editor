@@ -1,0 +1,16 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "Raw",
+      "tagType": "Folder",
+      "tags": [
+        {"name": "SameExact", "tagType": "AtomicTag", "dataType": "Boolean"},
+        {"name": "M10_RUN", "tagType": "AtomicTag", "dataType": "Boolean"},
+        {"name": "M10_RDY", "tagType": "AtomicTag", "dataType": "Boolean"},
+        {"name": "Pump01_Runing", "tagType": "AtomicTag", "dataType": "Boolean"}
+      ]
+    }
+  ]
+}
