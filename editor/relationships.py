@@ -43,6 +43,8 @@ EVIDENCE_TYPES = (
     "INSTANCE_TYPE",
     "MANUAL",
 )
+SUGGESTION_EVIDENCE_TYPES = ("REFERENCE_EXPECTATION",)
+QUERY_EVIDENCE_TYPES = EVIDENCE_TYPES + SUGGESTION_EVIDENCE_TYPES
 ORIGINS = ("AUTO_EXACT", "MANUAL", "SUGGESTION")
 
 MAX_RELATIONSHIP_PAGE_SIZE = 500
@@ -1035,7 +1037,7 @@ def query_relationships(
     """Paginirano vrni relacije z dokazom in kontekstom obeh vozlisc."""
     _validate_filter(role, RELATIONSHIP_ROLES, "role")
     _validate_filter(state, RELATIONSHIP_STATES, "state")
-    _validate_filter(evidence_type, EVIDENCE_TYPES, "evidence_type")
+    _validate_filter(evidence_type, QUERY_EVIDENCE_TYPES, "evidence_type")
     if limit < 1 or limit > MAX_RELATIONSHIP_PAGE_SIZE:
         raise RelationshipError(
             f"limit mora biti med 1 in {MAX_RELATIONSHIP_PAGE_SIZE}"
