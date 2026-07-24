@@ -463,6 +463,14 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Meja commit-a:** en commit.
 
 ### G1. Storitvi SimTree + diff
+- **Status:** zaključeno. `editor/simulation.py` doda lazy `SimTree`, `sim_children`,
+  `sim_details` in strukturiran `diff`. Overlay bere samo zahtevano baseline vejo ter
+  veljavne operacije: ustvarjena/premaknjena vozlišča, efektivna imena, poti, lastnosti,
+  reference in parametri so vidni brez zapisov v projekt. Diff loči `added`, `renamed`,
+  `moved`, `property_changed`, `reference_changed` in `deleted`; konfliktne in odložene
+  korake vrne kot `skipped`. Na kopiji realnega 277.607-vozliščnega projekta:
+  `sim_children` ~0,0026 s, `sim_details` ~0,0164 s, diff ene operacije ~0,0003 s.
+  Celotna zbirka: 200 zelenih testov.
 - **Cilj:** efektivno drevo (lazy) iz baseline+operacij; strukturiran diff. **Odvisnosti:**
   F1. **Datoteke:** `editor/simulation.py`, `tests/test_simulation.py`.
 - **Storitve:** `sim_children(node_uid)`, `sim_details`, `diff(project)` (added/renamed/
@@ -624,11 +632,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**G1 – Storitvi SimTree in diff.** Nad nespremenljivim baselineom in veljavnim F1
-dnevnikom dodaj lazy efektivno drevo, `sim_children`, `sim_details` in strukturiran
-`diff(project)` za added/renamed/moved/property/reference/deleted kategorije. Branje
-simulacije ne sme pisati ne v baseline ne v dnevnik operacij. (B1, B2, C1–C4, D1–D2,
-E1–E2 in F1–F2 so zaključeni.)
+**G2 – Undo/redo in trajnost kazalca.** Razširi dnevnik z vztrajnim kazalcem aktivnih
+operacij. `undo` in `redo` morata spreminjati samo kazalec, SimTree/diff pa morata
+upoštevati le aktivni prefiks; nova operacija po undo odstrani redo vejo. Save/reopen
+mora obnoviti baseline, relacije, operacije in isti kazalec. (B1, B2, C1–C4, D1–D2,
+E1–E2, F1–F2 in G1 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

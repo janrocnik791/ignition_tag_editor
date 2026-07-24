@@ -74,4 +74,12 @@ from .repository import (  # noqa: F401
     search_nodes,
 )
 from .schema import SCHEMA_VERSION  # noqa: F401
+from .simulation import (  # noqa: F401
+    MAX_SIM_PAGE_SIZE,
+    SimTree,
+    SimulationError,
+    diff,
+    sim_children,
+    sim_details,
+)
 from .udt_context import ProjectUdtContext  # noqa: F401
