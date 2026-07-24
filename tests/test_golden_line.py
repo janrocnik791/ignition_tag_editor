@@ -12,6 +12,7 @@ from editor import (
     diff,
     discover_exact,
     import_source,
+    propose_automation,
     query_relationships,
     verify_round_trip,
 )
@@ -43,6 +44,20 @@ def test_synthetic_golden_line_end_to_end(tmp_path):
         discovery = discover_exact(project)
         assert discovery["total"] == spec["expected"]["relationship_total"]
         assert discovery["by_state"] == spec["expected"]["relationship_states"]
+
+        proposals = propose_automation(project, include_fuzzy=False)
+        assert {
+            key: proposals[key]
+            for key in ("deterministic_name", "deterministic_group", "fuzzy")
+        } == spec["expected"]["automation"]
+        name_only = query_relationships(
+            project,
+            evidence_type="DETERMINISTIC_NAME_PATTERN",
+            limit=100,
+        )["results"]
+        # Identical names inside one provider are not cross-provider mappings.
+        assert not name_only
+        assert all(row["state"] != "EXACT" for row in name_only)
 
         manual_spec = spec["manual_confirmation"]
         anchor = _uid(project, manual_spec["provider"], manual_spec["path"])

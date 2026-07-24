@@ -8,34 +8,23 @@ confirmation and never treats a name match as exact evidence.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sqlite3
 import tempfile
-from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
 
 from analyzer.reference.importer import build_reference_index
 from analyzer.reference.query import get_expected_state
 
 from .project import Project, ProjectError
+from .relationships import create_suggestion_relationship
 
 REFERENCE_EVIDENCE_TYPE = "REFERENCE_EXPECTATION"
 
 
 class ReferenceContextError(ProjectError):
     """The optional reference context could not be read or applied."""
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _canonical_json(value: Any) -> str:
-    return json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
 
 
 def _candidate_nodes(
@@ -56,40 +45,6 @@ def _candidate_nodes(
     ]
 
 
-def _source_hashes(
-    project: Project, node_uids: Iterable[Optional[str]]
-) -> str:
-    values = []
-    seen = set()
-    for node_uid in node_uids:
-        if node_uid is None:
-            continue
-        row = project.conn.execute(
-            "SELECT s.id, s.sha256 FROM baseline_nodes b "
-            "JOIN sources s ON s.id=b.source_id WHERE b.node_uid=?",
-            (node_uid,),
-        ).fetchone()
-        if row is not None and row["id"] not in seen:
-            seen.add(row["id"])
-            values.append({"source_id": row["id"], "sha256": row["sha256"]})
-    return _canonical_json(sorted(values, key=lambda item: item["source_id"]))
-
-
-def _suggestion_uid(
-    source_uid: str, target_uid: Optional[str], evidence: Dict[str, Any]
-) -> str:
-    identity = "\x00".join(
-        (
-            "SUGGESTION",
-            REFERENCE_EVIDENCE_TYPE,
-            source_uid,
-            target_uid or "",
-            _canonical_json(evidence),
-        )
-    )
-    return hashlib.sha1(identity.encode("utf-8")).hexdigest()
-
-
 def _upsert_suggestion(
     project: Project,
     *,
@@ -98,35 +53,17 @@ def _upsert_suggestion(
     state: str,
     evidence: Dict[str, Any],
 ) -> str:
-    target_uid = target["node_uid"] if target else None
-    relationship_uid = _suggestion_uid(
-        source["node_uid"], target_uid, evidence
+    result = create_suggestion_relationship(
+        project,
+        source["node_uid"],
+        target["node_uid"] if target else None,
+        "GENERIC",
+        REFERENCE_EVIDENCE_TYPE,
+        evidence,
+        state=state,
+        namespace="reference_context",
     )
-    now = _now()
-    project.conn.execute(
-        "INSERT INTO relationships ("
-        "relationship_uid, source_node_uid, target_node_uid, role, state, "
-        "evidence_type, evidence_json, origin, confidence, confirmed_by, "
-        "confirmed_at, created_at, updated_at, source_hashes_json"
-        ") VALUES (?, ?, ?, 'GENERIC', ?, ?, ?, 'SUGGESTION', NULL, NULL, "
-        "NULL, ?, ?, ?) ON CONFLICT(relationship_uid) DO UPDATE SET "
-        "source_node_uid=excluded.source_node_uid, "
-        "target_node_uid=excluded.target_node_uid, state=excluded.state, "
-        "evidence_json=excluded.evidence_json, updated_at=excluded.updated_at, "
-        "source_hashes_json=excluded.source_hashes_json",
-        (
-            relationship_uid,
-            source["node_uid"],
-            target_uid,
-            state,
-            REFERENCE_EVIDENCE_TYPE,
-            _canonical_json(evidence),
-            now,
-            now,
-            _source_hashes(project, (source["node_uid"], target_uid)),
-        ),
-    )
-    return relationship_uid
+    return result["relationship_uid"]
 
 
 def _provenance_key(provenance: Dict[str, Any]) -> Dict[str, Any]:
@@ -269,7 +206,9 @@ def apply_reference_index(
             (REFERENCE_EVIDENCE_TYPE,),
         ).fetchall()
         stale = 0
-        now = _now()
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc).isoformat()
         for row in existing:
             evidence = json.loads(row["evidence_json"])
             same_context = all(

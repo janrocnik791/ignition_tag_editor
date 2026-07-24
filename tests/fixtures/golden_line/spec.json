@@ -32,6 +32,11 @@
   "expected": {
     "relationship_total": 14,
     "relationship_states": {"AMBIGUOUS": 1, "EXACT": 10, "UNRESOLVED": 3},
+    "automation": {
+      "deterministic_name": 0,
+      "deterministic_group": 0,
+      "fuzzy": 0
+    },
     "diff_counts": {
       "added": 0,
       "deleted": 0,

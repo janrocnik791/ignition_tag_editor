@@ -43,7 +43,12 @@ EVIDENCE_TYPES = (
     "INSTANCE_TYPE",
     "MANUAL",
 )
-SUGGESTION_EVIDENCE_TYPES = ("REFERENCE_EXPECTATION",)
+SUGGESTION_EVIDENCE_TYPES = (
+    "REFERENCE_EXPECTATION",
+    "DETERMINISTIC_NAME_PATTERN",
+    "DETERMINISTIC_GROUP_PATTERN",
+    "FUZZY_NAME_SIMILARITY",
+)
 QUERY_EVIDENCE_TYPES = EVIDENCE_TYPES + SUGGESTION_EVIDENCE_TYPES
 ORIGINS = ("AUTO_EXACT", "MANUAL", "SUGGESTION")
 
@@ -761,6 +766,87 @@ def create_manual_relationship(
         note=note,
         details=evidence,
     )
+
+
+def create_suggestion_relationship(
+    project: Project,
+    source_node_uid: str,
+    target_node_uid: Optional[str],
+    role: str,
+    evidence_type: str,
+    evidence: Dict[str, Any],
+    *,
+    state: str = "UNRESOLVED",
+    confidence: Optional[float] = None,
+    namespace: str = "suggestion",
+) -> Dict[str, Any]:
+    """Create or refresh a never-auto-approved proposal.
+
+    Suggestions deliberately cannot use exact or manual states.  Confirmation goes
+    through :func:`confirm_relationship`, which creates a separate MANUAL audit row.
+    """
+    _validate_filter(role, RELATIONSHIP_ROLES, "role")
+    _validate_filter(evidence_type, QUERY_EVIDENCE_TYPES, "evidence_type")
+    if state not in ("UNRESOLVED", "AMBIGUOUS", "CONFLICT"):
+        raise RelationshipError(
+            "Predlog je lahko samo UNRESOLVED, AMBIGUOUS ali CONFLICT"
+        )
+    if not isinstance(evidence, dict):
+        raise RelationshipError("evidence mora biti slovar")
+    if not isinstance(namespace, str) or not namespace.strip():
+        raise RelationshipError("namespace mora biti neprazen niz")
+    _require_node(project, source_node_uid, "source")
+    if target_node_uid is not None:
+        _require_node(project, target_node_uid, "target")
+    if source_node_uid == target_node_uid:
+        raise RelationshipError("Predlog ne sme povezati taga samega s sabo")
+    if confidence is not None and not 0.0 <= confidence <= 1.0:
+        raise RelationshipError("confidence mora biti med 0 in 1")
+
+    payload = dict(evidence)
+    payload["suggestion_namespace"] = namespace.strip()
+    identity = "\x00".join(
+        (
+            "SUGGESTION",
+            namespace.strip(),
+            evidence_type,
+            source_node_uid,
+            target_node_uid or "",
+            role,
+            _canonical_json(payload),
+        )
+    )
+    relationship_uid = hashlib.sha1(identity.encode("utf-8")).hexdigest()
+    now = _now()
+    source_hashes = _snapshot_source_hashes(
+        project, (source_node_uid, target_node_uid)
+    )
+    with project.conn:
+        project.conn.execute(
+            "INSERT INTO relationships ("
+            "relationship_uid, source_node_uid, target_node_uid, role, state, "
+            "evidence_type, evidence_json, origin, confidence, confirmed_by, "
+            "confirmed_at, created_at, updated_at, source_hashes_json"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, 'SUGGESTION', ?, NULL, NULL, "
+            "?, ?, ?) ON CONFLICT(relationship_uid) DO UPDATE SET "
+            "state=excluded.state, evidence_json=excluded.evidence_json, "
+            "confidence=excluded.confidence, updated_at=excluded.updated_at, "
+            "source_hashes_json=excluded.source_hashes_json",
+            (
+                relationship_uid,
+                source_node_uid,
+                target_node_uid,
+                role,
+                state,
+                evidence_type,
+                _canonical_json(payload),
+                confidence,
+                now,
+                now,
+                _canonical_json(source_hashes),
+            ),
+        )
+    return _relationship(project, relationship_uid)
 
 
 def confirm_relationship(

@@ -188,15 +188,15 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint J — optional `analyzer/reference` context writes
-  provenance-rich, never-auto-approved `SUGGESTION` rows into the relationship model.
-- **Active / next:** Checkpoint K — deterministic grouping/mapping proposals followed
-  by bounded approximate matching.
+- **Last completed:** Checkpoint K — deterministic mapping/grouping proposals run
+  before thresholded, margin-checked, hard-bounded fuzzy suggestions; none auto-approve.
+- **Active / next:** Checkpoint L — advanced validation, full/limited production export,
+  supplied Ignition re-export verification, and PyInstaller packaging.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (223 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (226 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** J implemented on `checkpoint-j` from the merged I baseline in
+- **Branch:** K implemented on `checkpoint-k` from the merged J baseline in
   `origin/main`.
 - **Blocker:** none.

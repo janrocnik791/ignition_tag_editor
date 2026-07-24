@@ -17,6 +17,11 @@ from .import_service import (  # noqa: F401
     parse_provider_name,
     validate_source,
 )
+from .automation import (  # noqa: F401
+    AUTOMATION_EVIDENCE_TYPES,
+    AutomationError,
+    propose_automation,
+)
 from .export import (  # noqa: F401
     ExportError,
     canonical_export_bytes,
@@ -64,6 +69,7 @@ from .relationships import (  # noqa: F401
     RelationshipError,
     confirm_relationship,
     create_manual_relationship,
+    create_suggestion_relationship,
     discover_exact,
     query_relationships,
     refresh_relationship_validity,
