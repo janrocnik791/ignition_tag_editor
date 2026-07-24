@@ -367,6 +367,12 @@ class RelationshipPanel(QWidget):
             "evidence_type": relation["evidence_type"],
             "origin": relation["origin"],
             "confidence": relation["confidence"],
+            "is_effective": relation.get("is_effective"),
+            "removed": relation.get("removed", False),
+            "manual_override_uid": relation.get("manual_override_uid"),
+            "confirmed_by": relation.get("confirmed_by"),
+            "confirmed_at": relation.get("confirmed_at"),
+            "validity": relation.get("validity"),
             "evidence": relation["evidence"],
             "source_hashes": relation["source_hashes"],
         }

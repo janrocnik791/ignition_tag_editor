@@ -418,6 +418,13 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   preživijo ponovno odprtje. **Meja commit-a:** en commit.
 
 ### E2. UI urejevalnik ročnih povezav
+- **Status:** zaključeno. Nova stran `Ročne povezave` je sinhronizirana z izborom v
+  drevesu in iskanju. Uporabnik eksplicitno poišče ter izbere drugi tag, določi smer in
+  vlogo povezave, vnese auditnega uporabnika in opombo ter nato ustvari, potrdi, zavrne
+  ali logično odstrani odločitev. Nerešena relacija zahteva izbranega kandidata.
+  Urejevalnik po zapisu osveži tudi read-only verigo, ki zdaj pokaže veljavnost,
+  efektivnost in auditna polja. Odločitve so vidne po ponovnem odprtju projekta.
+  Celotna zbirka: 168 zelenih testov.
 - **Cilj:** ročno poveži/razveži iz UI; ponovno odprtje ohrani. **Odvisnosti:** E1, D2.
   **Datoteke:** `ui/manual_link_editor.py`, testi. **Meja commit-a:** en commit.
 
@@ -598,11 +605,12 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**E2 – UI urejevalnik ročnih povezav.** Dodaj `ui/manual_link_editor.py`, ki nad
-zaključenim E1 servisom omogoča ročno povezavo, potrditev, zavrnitev in razvezavo.
-Izbor kandidatov mora ostati ekspliciten, audit in veljavnost vidna, ponovno odprtje
-projekta pa mora prikazati shranjeno odločitev. (B1, B2, C1–C4, D1–D2 in E1 so
-zaključeni.)
+**F1 – Model in storitve operacij.** Dodaj migracijo za tabelo `operations` ter
+`editor/operations.py` za validacijo, urejanje vrstnega reda, uporabo v simulaciji in
+inverz operacij `CREATE_*`, `RENAME`, `MOVE`, `UPDATE_PROPERTY`,
+`UPDATE_SOURCE_PATH` in `UPDATE_PARAMETERS`. `DELETE` ostane modeliran, vendar izvedba
+ostane odložena. Baseline mora ostati nespremenjen. (B1, B2, C1–C4, D1–D2 in E1–E2
+so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

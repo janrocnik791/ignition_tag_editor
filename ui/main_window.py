@@ -30,6 +30,7 @@ from editor import (
 )
 
 from .inspector_panel import InspectorPanel
+from .manual_link_editor import ManualLinkEditor
 from .models.tree_model import TreeModel
 from .relationship_panel import RelationshipPanel
 from .search_panel import SearchPanel
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self._inspector_panel: Optional[InspectorPanel] = None
         self._udt_panel: Optional[UdtPanel] = None
         self._relationship_panel: Optional[RelationshipPanel] = None
+        self._manual_link_editor: Optional[ManualLinkEditor] = None
         self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(1200, 720)
@@ -78,6 +80,10 @@ class MainWindow(QMainWindow):
     @property
     def relationship_panel(self) -> Optional[RelationshipPanel]:
         return self._relationship_panel
+
+    @property
+    def manual_link_editor(self) -> Optional[ManualLinkEditor]:
+        return self._manual_link_editor
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -131,10 +137,12 @@ class MainWindow(QMainWindow):
         inspector_panel = InspectorPanel(self)
         udt_panel = UdtPanel(self)
         relationship_panel = RelationshipPanel(project, self)
+        manual_link_editor = ManualLinkEditor(project, self)
         details_tabs = QTabWidget(self)
         details_tabs.addTab(inspector_panel, "Inspektor")
         details_tabs.addTab(udt_panel, "UDT kontekst")
         details_tabs.addTab(relationship_panel, "Relacije")
+        details_tabs.addTab(manual_link_editor, "Ročne povezave")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
@@ -149,6 +157,7 @@ class MainWindow(QMainWindow):
         self._inspector_panel = inspector_panel
         self._udt_panel = udt_panel
         self._relationship_panel = relationship_panel
+        self._manual_link_editor = manual_link_editor
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
@@ -156,6 +165,9 @@ class MainWindow(QMainWindow):
             self._tree_selection_changed
         )
         search_panel.nodeSelected.connect(self._show_node)
+        manual_link_editor.relationshipsChanged.connect(
+            self._refresh_relationship_views
+        )
 
         if old_project is not None:
             old_project.close()
@@ -177,6 +189,7 @@ class MainWindow(QMainWindow):
             or self._inspector_panel is None
             or self._udt_panel is None
             or self._relationship_panel is None
+            or self._manual_link_editor is None
         ):
             return
         try:
@@ -193,6 +206,23 @@ class MainWindow(QMainWindow):
         self._relationship_panel.set_node(
             node_uid,
             details.get("path_at_import"),
+        )
+        self._manual_link_editor.set_node(
+            node_uid,
+            details.get("path_at_import"),
+        )
+
+    def _refresh_relationship_views(self) -> None:
+        if (
+            self._relationship_panel is None
+            or self._manual_link_editor is None
+            or self._manual_link_editor.node_uid is None
+        ):
+            return
+        node_uid = self._manual_link_editor.node_uid
+        self._relationship_panel.set_node(
+            node_uid,
+            self._manual_link_editor.node_path,
         )
 
     def closeEvent(self, event) -> None:

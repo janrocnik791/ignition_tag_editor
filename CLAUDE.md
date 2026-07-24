@@ -188,19 +188,19 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint E1 — persistent manual relationships support direct
-  creation, confirmation, rejection, and logical removal without modifying automatic
-  evidence. Every decision records actor/time/note history and source hashes; validity
-  refresh marks changed anchors `STALE` and restores their prior state after the source
-  content returns. Active manual decisions override automatic relationships and reserved
-  future suggestions. Also done: A, B1, B2, C1, C2, C3, C4, D1, D2; Explorer MVP
-  remains complete.
-- **Active / next:** Checkpoint E2 — UI editor for manual relationships.
+- **Last completed:** Checkpoint E2 — the synchronized `Ročne povezave` page provides
+  explicit candidate search/selection, direction and role controls, required audit actor,
+  optional note, and create/confirm/reject/logical-remove actions over E1 services.
+  Unresolved relationships require an explicit candidate; successful writes refresh the
+  read-only chain, whose evidence view includes validity, effective state, and audit
+  fields. Decisions persist across project reopen. Also done: A, B1, B2, C1, C2, C3,
+  C4, D1, D2, E1; Explorer MVP remains complete.
+- **Active / next:** Checkpoint F1 — operation model and services.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery (schema v3: `project_meta`, `sources`, `baseline_nodes`, `relationships`);
-  the test suite passes (163 tests); the GUI can inspect exact relationships but has no
-  manual relationship editor or `operations` yet.
-- **Branch:** E1 implemented on `checkpoint-e1` from the merged D2 baseline in
+  the test suite passes (168 tests); the GUI can inspect and manually curate relationships
+  but has no `operations` model yet.
+- **Branch:** E2 implemented on `checkpoint-e2` from the merged E1 baseline in
   `origin/main`.
 - **Blocker:** none.
