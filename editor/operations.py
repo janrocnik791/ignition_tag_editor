@@ -767,10 +767,12 @@ def create_operation(
         isinstance(item, str) and item for item in dependency_uids
     ):
         raise OperationError("depends_on vsebuje neveljaven operation_uid")
+    cursor = operation_cursor(project)
     known_dependencies = {
         row["operation_uid"]
         for row in project.conn.execute(
-            "SELECT operation_uid FROM operations"
+            "SELECT operation_uid FROM operations WHERE seq <= ?",
+            (cursor,),
         ).fetchall()
     }
     unknown = sorted(set(dependency_uids) - known_dependencies)
@@ -785,6 +787,12 @@ def create_operation(
         target_node_uid,
         payload,
     )
+    with project.conn:
+        project.conn.execute(
+            "DELETE FROM operations WHERE seq > ?",
+            (cursor,),
+        )
+    _refresh_conflict_groups(project)
     referenced_new_uids = []
     if (
         validated["op_type"] not in CREATE_OPERATION_TYPES
@@ -800,8 +808,8 @@ def create_operation(
             "SELECT operation_uid FROM operations "
             "WHERE target_node_uid = ? AND op_type IN "
             "('CREATE_TAG','CREATE_FOLDER','CREATE_UDT_INSTANCE') "
-            "ORDER BY seq DESC LIMIT 1",
-            (new_uid,),
+            "AND seq <= ? ORDER BY seq DESC LIMIT 1",
+            (new_uid, cursor),
         ).fetchone()
         if creator is None:
             raise OperationError(
@@ -817,7 +825,7 @@ def create_operation(
     conflict_key = _operation_conflict_key(operation)
     conflicting_uids: List[str] = []
     if conflict_key is not None:
-        for existing in list_operations(project):
+        for existing in active_operations(project):
             if (
                 existing["status"] in ("VALID", "CONFLICT")
                 and existing["target_node_uid"]
@@ -838,9 +846,7 @@ def create_operation(
             f"Vec operacij spreminja {conflict_key} istega vozlisca"
         )
 
-    seq = project.conn.execute(
-        "SELECT COALESCE(MAX(seq), 0) + 1 FROM operations"
-    ).fetchone()[0]
+    seq = cursor + 1
     created_at = _now()
     with project.conn:
         if conflicting_uids:
@@ -883,6 +889,10 @@ def create_operation(
                 _canonical_json(conflict) if conflict else None,
             ),
         )
+        project.conn.execute(
+            "UPDATE project_meta SET operation_cursor = ? WHERE id = 1",
+            (seq,),
+        )
     return get_operation(project, operation_uid)
 
 
@@ -915,6 +925,61 @@ def list_operations(
     ]
 
 
+def operation_cursor(project: Project) -> int:
+    row = project.conn.execute(
+        "SELECT operation_cursor FROM project_meta WHERE id = 1"
+    ).fetchone()
+    if row is None:
+        raise OperationError("Projekt nima project_meta")
+    cursor = int(row["operation_cursor"])
+    maximum = project.conn.execute(
+        "SELECT COALESCE(MAX(seq), 0) FROM operations"
+    ).fetchone()[0]
+    if not 0 <= cursor <= maximum:
+        raise OperationError(
+            f"Neveljaven operation_cursor {cursor}; maksimum je {maximum}"
+        )
+    return cursor
+
+
+def active_operations(project: Project) -> List[Dict[str, Any]]:
+    cursor = operation_cursor(project)
+    return [
+        operation
+        for operation in list_operations(project)
+        if operation["seq"] <= cursor
+    ]
+
+
+def undo(project: Project, steps: int = 1) -> int:
+    if not isinstance(steps, int) or isinstance(steps, bool) or steps < 1:
+        raise OperationError("steps mora biti pozitivno celo stevilo")
+    cursor = max(0, operation_cursor(project) - steps)
+    with project.conn:
+        project.conn.execute(
+            "UPDATE project_meta SET operation_cursor = ? WHERE id = 1",
+            (cursor,),
+        )
+    _refresh_conflict_groups(project)
+    return cursor
+
+
+def redo(project: Project, steps: int = 1) -> int:
+    if not isinstance(steps, int) or isinstance(steps, bool) or steps < 1:
+        raise OperationError("steps mora biti pozitivno celo stevilo")
+    maximum = project.conn.execute(
+        "SELECT COALESCE(MAX(seq), 0) FROM operations"
+    ).fetchone()[0]
+    cursor = min(maximum, operation_cursor(project) + steps)
+    with project.conn:
+        project.conn.execute(
+            "UPDATE project_meta SET operation_cursor = ? WHERE id = 1",
+            (cursor,),
+        )
+    _refresh_conflict_groups(project)
+    return cursor
+
+
 def ordered_operations(
     project: Project,
     *,
@@ -927,9 +992,10 @@ def ordered_operations(
         raise OperationError(
             "Neveljavni statusi: " + ", ".join(sorted(unknown_statuses))
         )
+    all_rows = list_operations(project)
     selected = {
         operation["operation_uid"]: operation
-        for operation in list_operations(project)
+        for operation in active_operations(project)
         if operation["status"] in allowed
     }
     indegree = {uid: 0 for uid in selected}
@@ -940,7 +1006,7 @@ def ordered_operations(
                 indegree[uid] += 1
                 followers[dependency].append(uid)
             elif dependency not in {
-                row["operation_uid"] for row in list_operations(project)
+                row["operation_uid"] for row in all_rows
             }:
                 raise OperationError(
                     f"Operacija {uid} ima manjkajoco odvisnost {dependency}"
@@ -971,6 +1037,10 @@ def reorder_operation(
 ) -> List[Dict[str, Any]]:
     """Premakni operacijo na zero-based indeks in normaliziraj seq."""
     operations = list_operations(project)
+    if operation_cursor(project) < len(operations):
+        raise OperationError(
+            "Vrstnega reda ni mogoce spreminjati, dokler obstaja redo veja"
+        )
     if not isinstance(new_index, int) or isinstance(new_index, bool):
         raise OperationError("new_index mora biti celo stevilo")
     if not 0 <= new_index < len(operations):
@@ -1011,11 +1081,15 @@ def reorder_operation(
 
 
 def _refresh_conflict_groups(project: Project) -> None:
+    cursor = operation_cursor(project)
     operations = list_operations(project)
     candidates = [
         operation
         for operation in operations
-        if operation["status"] in ("VALID", "CONFLICT")
+        if (
+            operation["seq"] <= cursor
+            and operation["status"] in ("VALID", "CONFLICT")
+        )
     ]
     groups: Dict[Tuple[str, str], List[str]] = {}
     for operation in candidates:
@@ -1054,7 +1128,7 @@ def remove_operation(
     operation_uid: str,
 ) -> List[Dict[str, Any]]:
     """Odstrani stage-an korak, ce nobena druga operacija ni odvisna od njega."""
-    get_operation(project, operation_uid)
+    selected = get_operation(project, operation_uid)
     dependents = [
         operation["operation_uid"]
         for operation in list_operations(project)
@@ -1065,19 +1139,28 @@ def remove_operation(
             "Operacije ni mogoce odstraniti; odvisne operacije: "
             + ", ".join(dependents)
         )
+    cursor = operation_cursor(project)
     with project.conn:
         project.conn.execute(
             "DELETE FROM operations WHERE operation_uid = ?",
             (operation_uid,),
         )
-    _refresh_conflict_groups(project)
-    operations = list_operations(project)
-    with project.conn:
+        if selected["seq"] <= cursor:
+            cursor -= 1
+        project.conn.execute(
+            "UPDATE project_meta SET operation_cursor = ? WHERE id = 1",
+            (cursor,),
+        )
+        operations = project.conn.execute(
+            "SELECT operation_uid FROM operations "
+            "ORDER BY seq, operation_uid"
+        ).fetchall()
         for seq, operation in enumerate(operations, 1):
             project.conn.execute(
                 "UPDATE operations SET seq = ? WHERE operation_uid = ?",
                 (seq, operation["operation_uid"]),
             )
+    _refresh_conflict_groups(project)
     return list_operations(project)
 
 

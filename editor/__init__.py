@@ -30,6 +30,7 @@ from .operations import (  # noqa: F401
     OPERATION_STATUSES,
     OPERATION_TYPES,
     OperationError,
+    active_operations,
     apply_operation_to_state,
     build_simulation_state,
     create_operation,
@@ -38,9 +39,12 @@ from .operations import (  # noqa: F401
     list_operations,
     load_baseline_state,
     ordered_operations,
+    operation_cursor,
+    redo,
     remove_operation,
     reorder_operation,
     validate_operation,
+    undo,
 )
 from .relationships import (  # noqa: F401
     EVIDENCE_TYPES,

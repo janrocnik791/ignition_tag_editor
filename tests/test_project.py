@@ -39,7 +39,8 @@ def test_create_project_builds_current_schema(tmp_path):
         assert os.path.exists(p.db_path)
         assert p.name == "Test projekt"
         assert p.project_uid  # dodeljen
-        assert p.schema_version == SCHEMA_VERSION == 4
+        assert p.schema_version == SCHEMA_VERSION == 5
+        assert p.meta["operation_cursor"] == 0
     finally:
         p.close()
 
@@ -54,7 +55,7 @@ def test_create_project_builds_current_schema(tmp_path):
 
     conn = sqlite3.connect(p.db_path)
     try:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM sources").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM baseline_nodes").fetchone()[0] == 0
         relationship_columns = {
@@ -219,7 +220,7 @@ def test_schema_newer_than_supported_raises(tmp_path):
         open_project(d)
 
 
-def test_v1_project_migrates_through_v4(tmp_path):
+def test_v1_project_migrates_through_v5(tmp_path):
     d = str(tmp_path / "proj")
     p = create_project(d, name="Starejsi")
     db = p.db_path
@@ -237,6 +238,9 @@ def test_v1_project_migrates_through_v4(tmp_path):
         conn.execute(f'DROP INDEX "{index_name}"')
     conn.execute("DROP TABLE relationships")
     conn.execute("DROP TABLE operations")
+    conn.execute(
+        "ALTER TABLE project_meta DROP COLUMN operation_cursor"
+    )
     conn.execute("PRAGMA user_version = 1")
     conn.execute("UPDATE project_meta SET schema_version = 1 WHERE id = 1")
     conn.commit()
@@ -244,7 +248,7 @@ def test_v1_project_migrates_through_v4(tmp_path):
 
     migrated = open_project(d)
     try:
-        assert migrated.schema_version == 4
+        assert migrated.schema_version == 5
         indexes = {
             row[0]
             for row in migrated.conn.execute(
@@ -289,6 +293,9 @@ def test_v2_project_migrates_relationships_without_rewriting_baseline(tmp_path):
     )
     p.conn.execute("DROP TABLE relationships")
     p.conn.execute("DROP TABLE operations")
+    p.conn.execute(
+        "ALTER TABLE project_meta DROP COLUMN operation_cursor"
+    )
     p.conn.execute("PRAGMA user_version = 2")
     p.conn.execute(
         "UPDATE project_meta SET schema_version = 2 WHERE id = 1"
@@ -304,7 +311,7 @@ def test_v2_project_migrates_relationships_without_rewriting_baseline(tmp_path):
                 "SELECT node_uid, raw_json FROM baseline_nodes"
             ).fetchone()
         )
-        assert migrated.schema_version == 4
+        assert migrated.schema_version == 5
         assert before == after
         assert "relationships" in _tables(db)
         assert "operations" in _tables(db)
@@ -337,6 +344,9 @@ def test_v3_project_migrates_operations_without_rewriting_baseline(tmp_path):
         ).fetchone()
     )
     project.conn.execute("DROP TABLE operations")
+    project.conn.execute(
+        "ALTER TABLE project_meta DROP COLUMN operation_cursor"
+    )
     project.conn.execute("PRAGMA user_version = 3")
     project.conn.execute(
         "UPDATE project_meta SET schema_version = 3 WHERE id = 1"
@@ -352,9 +362,38 @@ def test_v3_project_migrates_operations_without_rewriting_baseline(tmp_path):
                 "SELECT node_uid, raw_json FROM baseline_nodes"
             ).fetchone()
         )
-        assert migrated.schema_version == 4
+        assert migrated.schema_version == 5
         assert before == after
         assert "operations" in _tables(db_path)
+    finally:
+        migrated.close()
+
+
+def test_v4_project_migrates_cursor_to_existing_journal_end(tmp_path):
+    project = create_project(str(tmp_path / "proj"), name="V4")
+    project.conn.execute(
+        "INSERT INTO operations ("
+        "operation_uid, seq, op_type, target_node_uid, payload_json, "
+        "original_json, status, reason, created_by, created_at, "
+        "depends_on_json, conflict_info"
+        ") VALUES ('op-1', 1, 'DELETE_TAG', 'node-1', '{}', '{}', "
+        "'DEFERRED', 'test', 'tester', 'now', '[]', NULL)"
+    )
+    project.conn.execute(
+        "ALTER TABLE project_meta DROP COLUMN operation_cursor"
+    )
+    project.conn.execute("PRAGMA user_version = 4")
+    project.conn.execute(
+        "UPDATE project_meta SET schema_version = 4 WHERE id = 1"
+    )
+    project.conn.commit()
+    db_path = project.db_path
+    project.close()
+
+    migrated = open_project(db_path)
+    try:
+        assert migrated.schema_version == 5
+        assert migrated.meta["operation_cursor"] == 1
     finally:
         migrated.close()
 

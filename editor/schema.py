@@ -8,7 +8,8 @@ cakajoce migracije. Baseline se s poznejsimi migracijami nikoli ne prepise.
 Mejnik B1 ustvari v1 shemo: ``project_meta``, ``sources``, ``baseline_nodes``.
 C3 doda v2 iskalne indekse brez spremembe baseline vrstic.
 D1 doda v3 tabelo ``relationships`` brez spremembe baseline vrstic. F1 doda
-v4 tabelo ``operations``, prav tako brez spremembe baseline vrstic.
+v4 tabelo ``operations``, prav tako brez spremembe baseline vrstic. G2 doda
+v5 trajni kazalec undo/redo v ``project_meta``.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import sqlite3
 from typing import Callable, List, Tuple
 
 # Trenutna ciljna verzija sheme.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Identifikator aplikacije, shranjen v project_meta (locevanje tujih .sqlite).
 APP_ID = "ignition_tag_editor"
@@ -189,12 +190,26 @@ def _migration_v4(conn: sqlite3.Connection) -> None:
     conn.executescript(_V4_SQL)
 
 
+# ---- v5: G2 trajni kazalec aktivnega prefiksa operacij ------------------
+
+def _migration_v5(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "ALTER TABLE project_meta ADD COLUMN operation_cursor "
+        "INTEGER NOT NULL DEFAULT 0"
+    )
+    conn.execute(
+        "UPDATE project_meta SET operation_cursor = "
+        "(SELECT COALESCE(MAX(seq), 0) FROM operations) WHERE id = 1"
+    )
+
+
 # Urejen seznam (verzija, funkcija). Dodaj nove migracije na konec.
 MIGRATIONS: List[Tuple[int, Callable[[sqlite3.Connection], None]]] = [
     (1, _migration_v1),
     (2, _migration_v2),
     (3, _migration_v3),
     (4, _migration_v4),
+    (5, _migration_v5),
 ]
 
 

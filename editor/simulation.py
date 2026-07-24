@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from .operations import (
     CREATE_OPERATION_TYPES,
     OperationError,
+    active_operations,
     list_operations,
 )
 from .project import Project
@@ -45,11 +46,19 @@ class SimTree:
     def __init__(self, project: Project) -> None:
         self.project = project
         self.all_operations = list_operations(project)
+        active_uids = {
+            operation["operation_uid"]
+            for operation in active_operations(project)
+        }
         self.operations = [
             operation
             for operation in self.all_operations
-            if operation["status"] == "VALID"
+            if (
+                operation["operation_uid"] in active_uids
+                and operation["status"] == "VALID"
+            )
         ]
+        self.active_uids = active_uids
         self.by_target: Dict[str, List[Dict[str, Any]]] = {}
         self.creates: Dict[str, Dict[str, Any]] = {}
         self.moves: Dict[str, Dict[str, Any]] = {}
@@ -465,8 +474,15 @@ def diff(project: Project) -> Dict[str, Any]:
             "reason": operation["reason"],
         }
         for operation in tree.all_operations
-        if operation["status"] != "VALID"
+        if (
+            operation["operation_uid"] not in tree.active_uids
+            or operation["status"] != "VALID"
+        )
     ]
+    for item in skipped:
+        if item["operation_uid"] not in tree.active_uids:
+            item["status"] = "UNDONE"
+            item["reason"] = "Operacija je za undo/redo kazalcem"
     return {
         "categories": categories,
         "counts": counts,
