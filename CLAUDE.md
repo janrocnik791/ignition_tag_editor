@@ -188,16 +188,15 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint G3 — the `Simulacija` workspace exposes a lazy effective
-  tree, structured before/after diff, persistent undo/redo controls, and validation of
-  the active operation prefix. Stage/remove/reorder/cursor changes refresh all views and
-  baseline remains separate. Editor MVP A–G is complete.
-- **Active / next:** Checkpoint H1 — limited deterministic Ignition 8.3 export.
+- **Last completed:** Checkpoint H1 — limited simulated subtrees serialize losslessly for
+  no-op input to deterministic Ignition 8.3 `tags.json`; package manifests include scope,
+  SHA-256, and the required UDT-definition warning. Unrelated branches are excluded.
+- **Active / next:** Checkpoint H2 — export UI and deterministic round-trip.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (211 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (215 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** G3 implemented on `checkpoint-g3` from the merged G2 baseline in
+- **Branch:** H1 implemented on `checkpoint-h1` from the merged G3 baseline in
   `origin/main`.
 - **Blocker:** none.

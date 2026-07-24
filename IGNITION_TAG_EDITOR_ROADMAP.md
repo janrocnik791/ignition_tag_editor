@@ -501,6 +501,10 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Meja commit-a:** en commit.
 
 ### H1. Omejen Ignition 8.3 izvoz
+- **Status:** zaključeno. `editor/export.py` izračuna omejen simulirani subtree,
+  brezizgubno rekonstruira no-op JSON pod `tags`, uporabi aktivne spremembe ter zapiše
+  deterministična `tags.json` in `manifest.json` s SHA-256. Manifest opozori, da UDT
+  instanca definicije ne vključuje samodejno. Celotna zbirka: 215 zelenih testov.
 - **Cilj:** izračun obsega + deterministicna serializacija + manifest. **Odvisnosti:** G1.
 - **Datoteke:** `editor/export.py`, `tests/test_export.py`.
 - **Storitve:** `compute_export_scope(selection)`, `serialize_ignition_json(scope)`,
@@ -643,10 +647,9 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**H1 – Omejen Ignition 8.3 izvoz.** Dodaj izračun obsega, deterministično
-serializacijo in manifest za izbrano simulirano vejo. No-op rekonstrukcija mora biti
-brezizgubna, izvoz pa ne sme vključiti nepovezanih providerjev ali vej. (Editor MVP
-A–G je zaključen.)
+**H2 – Export UI in round-trip.** Dodaj izbiro simulirane veje/ciljne mape, predogled
+obsega in opozoril ter zapis H1 paketa. Nato uvozi ustvarjeni `tags.json` v svež projekt
+in deterministično primerjaj vozlišča. (A–G in H1 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
