@@ -197,20 +197,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint F2 — the synchronized `Stage-ane spremembe` workspace
-  creates validated F1 operations from the selected node and shows the persistent journal
-  with sequence, status, target, payload, actor, original snapshot, dependencies, and
-  conflicts. Move uses explicit destination search; JSON inputs are validated. Safe
-  reorder/removal preserves dependencies and resolves conflict groups, while project
-  reopen restores the view and baseline remains unchanged. Also done: A, B1, B2, C1,
-  C2, C3, C4, D1, D2, E1, E2, F1; Explorer MVP remains complete.
-- **Active / next:** Checkpoint G1 — lazy SimTree and structured diff services.
+- **Last completed:** Checkpoint G1 — lazy `SimTree`, `sim_children`, `sim_details`, and
+  structured diff expose valid staged operations without writing the project. Added,
+  renamed, moved, property/parameter, reference, and deleted categories are separate;
+  conflicts/deferred rows are explicitly skipped. On 277,607 nodes, lazy children are
+  ~0.0026 s, details ~0.0164 s, and a one-operation diff ~0.0003 s. Also done: A, B1,
+  B2, C1, C2, C3, C4, D1, D2, E1, E2, F1, F2; Explorer MVP remains complete.
+- **Active / next:** Checkpoint G2 — persistent undo/redo cursor.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (193 tests);
-  the GUI exposes both relationship curation and staged operations, but not simulated
-  tree/diff views yet.
-- **Branch:** F2 implemented on `checkpoint-f2` from the merged F1 baseline in
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (200 tests);
+  headless services expose the simulated tree/diff, but the GUI does not show them yet.
+- **Branch:** G1 implemented on `checkpoint-g1` from the merged F2 baseline in
   `origin/main`.
 - **Blocker:** none.
