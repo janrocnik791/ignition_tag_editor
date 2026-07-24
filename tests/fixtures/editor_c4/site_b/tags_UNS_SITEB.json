@@ -1,0 +1,11 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "LineB",
+      "tagType": "UdtInstance",
+      "typeId": "MotorUDT"
+    }
+  ]
+}

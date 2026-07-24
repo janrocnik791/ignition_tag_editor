@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -80,6 +80,8 @@ class SearchResultsModel(QAbstractTableModel):
 
 
 class SearchPanel(QWidget):
+    nodeSelected = Signal(str)
+
     FIELD_LABELS = {
         "fullPath": "Pot",
         "name": "Ime",
@@ -132,6 +134,9 @@ class SearchPanel(QWidget):
             QTableView.SelectionBehavior.SelectRows
         )
         self.results_view.setSortingEnabled(False)
+        self.results_view.selectionModel().currentChanged.connect(
+            self._result_selected
+        )
 
         self.previous_button = QPushButton("Prejšnja", self)
         self.previous_button.setObjectName("previousPage")
@@ -225,3 +230,17 @@ class SearchPanel(QWidget):
             return
         self._offset += self._page_size
         self.execute_search()
+
+    def _result_selected(
+        self,
+        current: QModelIndex,
+        _previous: QModelIndex,
+    ) -> None:
+        if not current.isValid():
+            return
+        row = self.results_model.data(
+            self.results_model.index(current.row(), 0),
+            Qt.ItemDataRole.UserRole,
+        )
+        if row and row.get("node_uid"):
+            self.nodeSelected.emit(row["node_uid"])

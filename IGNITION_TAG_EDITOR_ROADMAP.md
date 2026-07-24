@@ -350,6 +350,14 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
 - **Kriteriji:** iskanje vrne štetje in vzorec brez izpisa tisočev. **Meja commit-a:** en commit.
 
 ### C4. Tag inspektor + UDT kontekst  → **Explorer MVP zaključen**
+- **Status:** zaključeno. `editor/udt_context.py` prilagodi projektni baseline
+  obstoječemu site-aware `UdtRegistry` ter izračuna efektivne lastnosti, člane,
+  parametre in dedovalno verigo brez spremembe baseline. `node_details` vrača raw in
+  efektivne lastnosti ter razširjen provenance. `ui/inspector_panel.py` in
+  `ui/udt_panel.py` sta read-only ter se osvežita ob izboru v lazy drevesu ali rezultatih
+  iskanja. Celotna zbirka: 135 zelenih testov. Realni projekt (277.607 vozlišč):
+  gradnja resolverja ~0,059 s, podrobnosti izbrane UDT instance ~0,0028 s, odprtje
+  celotnega okna ~0,841 s; C4 operacije niso zapisale sprememb.
 - **Cilj:** prikaz raw+efektivnih lastnosti, OPC, sourceTagPath, typeId, parametrov,
   provenance; UDT efektivni člani/parametri. **Odvisnosti:** C3.
 - **Ponovna uporaba:** `udt_resolver.effective_members/params/inheritance_chain`,
@@ -562,11 +570,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**C4 – Tag inspektor + UDT kontekst.** Za izbrano vozlišče prikaži raw in efektivne
-lastnosti, OPC/sourceTagPath/typeId/parametre/provenance ter efektivne UDT člane,
-parametre in dedovanje prek obstoječega `analyzer/udt_resolver.py`. Izbor v drevesu in
-rezultatih iskanja mora sinhronizirati inspektor. Izvede se **šele po ločeni instrukciji**.
-(B1, B2 in C1–C3 so zaključeni.)
+**D1 – Odkrivanje exact relacij.** Dodaj samo dokazljive relacije z evidenco in
+eksplicitnima stanjema `UNRESOLVED`/`AMBIGUOUS`; ime samo ni dokaz in hevristike ostanejo
+izven obsega. Uvedi verzionirano tabelo `relationships`, storitvi `discover_exact(project)`
+in `query_relationships` ter teste za vsak dokazni tip in mejne primere. Izvede se **šele
+po ločeni instrukciji**. (B1, B2 in C1–C4 so zaključeni; Explorer MVP je končan.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

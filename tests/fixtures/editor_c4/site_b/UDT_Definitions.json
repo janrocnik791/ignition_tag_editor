@@ -1,0 +1,20 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "MotorUDT",
+      "tagType": "UdtType",
+      "parameters": {
+        "Zone": {"dataType": "String", "value": "B"}
+      },
+      "tags": [
+        {
+          "name": "Temperature",
+          "tagType": "AtomicTag",
+          "dataType": "Float4"
+        }
+      ]
+    }
+  ]
+}

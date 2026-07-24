@@ -151,8 +151,16 @@ def test_node_details_raw_and_context(project):
     assert "raw_json" not in d
     assert d["child_count"] == 0 and d["has_children"] is False
     assert d["parent"]["name"] == "Area1"
-    assert d["provider"] == {"provider_name": "IO_TESTSITE_SIE",
-                             "site": "testsite", "kind": "io"}
+    assert {
+        key: d["provider"][key]
+        for key in ("provider_name", "site", "kind")
+    } == {
+        "provider_name": "IO_TESTSITE_SIE",
+        "site": "testsite",
+        "kind": "io",
+    }
+    assert d["provider"]["path"] == IO
+    assert len(d["provider"]["sha256"]) == 64
 
 
 def test_node_details_unknown_raises(project):

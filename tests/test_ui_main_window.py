@@ -46,4 +46,6 @@ def test_open_project_shows_lazy_tree(qtbot, project_path):
     assert isinstance(window.centralWidget(), QSplitter)
     assert isinstance(window.tree_view, QTreeView)
     assert window.search_panel is not None
+    assert window.inspector_panel is not None
+    assert window.udt_panel is not None
     assert "Okenski test" in window.windowTitle()
