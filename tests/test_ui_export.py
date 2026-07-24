@@ -8,7 +8,13 @@ import os
 import pytest
 from PySide6.QtCore import Qt
 
-from editor import create_project, import_source
+from editor import (
+    canonical_export_bytes,
+    compute_export_scope,
+    create_project,
+    import_source,
+    serialize_ignition_json,
+)
 from ui.export_panel import ExportPanel
 from ui.main_window import MainWindow
 
@@ -53,6 +59,29 @@ def test_export_panel_requires_output_directory(qtbot, project):
     panel.set_node(_uid(project, "Area1"), "Area1")
     qtbot.mouseClick(panel.export_button, Qt.MouseButton.LeftButton)
     assert "Izberi ciljno mapo" in panel.status_label.text()
+
+
+def test_export_panel_full_mode_and_ignition_reexport(
+    qtbot, project, tmp_path
+):
+    panel = ExportPanel(project)
+    qtbot.addWidget(panel)
+    root = _uid(project, "")
+    panel.set_node(root, "IO_TESTSITE_SIE")
+    panel.mode_combo.setCurrentIndex(panel.mode_combo.findData("full"))
+    panel.output_edit.setText(str(tmp_path / "full"))
+    qtbot.mouseClick(panel.export_button, Qt.MouseButton.LeftButton)
+    assert "EXPORT_VERIFIED" in panel.status_label.text()
+    assert len(list((tmp_path / "full").glob("tags_*.json"))) == 1
+
+    payload = serialize_ignition_json(
+        project, compute_export_scope(project, root)
+    )
+    reexport = tmp_path / "reexport.json"
+    reexport.write_bytes(canonical_export_bytes(payload))
+    panel.reexport_edit.setText(str(reexport))
+    qtbot.mouseClick(panel.reexport_verify, Qt.MouseButton.LeftButton)
+    assert "IGNITION_REEXPORT_VERIFIED" in panel.status_label.text()
 
 
 def test_main_window_selection_updates_export_panel(qtbot, tmp_path):

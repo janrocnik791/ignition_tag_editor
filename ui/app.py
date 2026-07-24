@@ -18,6 +18,11 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         help="Pot do mape projekta ali project.sqlite (neobvezno).",
     )
+    parser.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
     return parser
 
 
@@ -29,6 +34,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     window = MainWindow()
     if args.project:
         window.open_project_path(args.project)
+    if args.smoke_test:
+        window.close()
+        return 0
     window.show()
     return app.exec()
 

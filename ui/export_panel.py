@@ -6,6 +6,7 @@ import json
 from typing import Optional
 
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -20,7 +21,9 @@ from editor import (
     ExportError,
     Project,
     compute_export_scope,
+    verify_ignition_reexport,
     verify_round_trip,
+    write_production_package,
     write_package,
 )
 
@@ -32,6 +35,10 @@ class ExportPanel(QWidget):
         self.node_uid: Optional[str] = None
         self.selection_label = QLabel("Izberi simulirano vejo za izvoz.", self)
         self.selection_label.setStyleSheet("font-size: 18px; font-weight: 600;")
+        self.mode_combo = QComboBox(self)
+        self.mode_combo.setObjectName("exportMode")
+        self.mode_combo.addItem("Omejeni izvoz izbrane veje", "limited")
+        self.mode_combo.addItem("Polni izvoz vseh providerjev", "full")
         self.output_edit = QLineEdit(self)
         self.output_edit.setObjectName("exportOutputDirectory")
         self.browse_button = QPushButton("Izberi mapo …", self)
@@ -49,14 +56,27 @@ class ExportPanel(QWidget):
             self,
         )
         self.status_label.setWordWrap(True)
+        self.reexport_edit = QLineEdit(self)
+        self.reexport_edit.setObjectName("ignitionReexportPath")
+        self.reexport_browse = QPushButton("Izberi Ignition re-export …", self)
+        self.reexport_verify = QPushButton("Preveri post-import re-export", self)
+        self.reexport_verify.setObjectName("verifyIgnitionReexport")
+        reexport_row = QHBoxLayout()
+        reexport_row.addWidget(self.reexport_edit, 1)
+        reexport_row.addWidget(self.reexport_browse)
         layout = QVBoxLayout(self)
         layout.addWidget(self.selection_label)
+        layout.addWidget(self.mode_combo)
         layout.addLayout(output_row)
         layout.addWidget(self.preview, 1)
         layout.addWidget(self.export_button)
+        layout.addLayout(reexport_row)
+        layout.addWidget(self.reexport_verify)
         layout.addWidget(self.status_label)
         self.browse_button.clicked.connect(self.choose_directory)
         self.export_button.clicked.connect(self.export_package)
+        self.reexport_browse.clicked.connect(self.choose_reexport)
+        self.reexport_verify.clicked.connect(self.verify_reexport)
 
     def set_node(self, node_uid: str, path: Optional[str] = None) -> None:
         self.node_uid = node_uid
@@ -82,6 +102,16 @@ class ExportPanel(QWidget):
         if path:
             self.output_edit.setText(path)
 
+    def choose_reexport(self) -> None:
+        path, _filter = QFileDialog.getOpenFileName(
+            self,
+            "Izberi JSON, ponovno izvozen iz Ignitiona",
+            "",
+            "JSON (*.json);;Vse datoteke (*)",
+        )
+        if path:
+            self.reexport_edit.setText(path)
+
     def export_package(self) -> None:
         if self.node_uid is None:
             self._error("Najprej izberi vejo.")
@@ -91,18 +121,57 @@ class ExportPanel(QWidget):
             self._error("Izberi ciljno mapo.")
             return
         try:
-            verified = verify_round_trip(self.project, self.node_uid)
-            if not verified["matches"]:
-                raise ExportError("Round-trip primerjava se ne ujema")
-            package = write_package(self.project, self.node_uid, output)
+            mode = self.mode_combo.currentData()
+            if mode == "full":
+                package = write_production_package(self.project, output)
+                verified_count = sum(
+                    row["scope"]["node_count"] for row in package["exports"]
+                )
+                tags_path = f"{len(package['files'])} datotek"
+            else:
+                verified = verify_round_trip(self.project, self.node_uid)
+                if not verified["matches"]:
+                    raise ExportError("Round-trip primerjava se ne ujema")
+                package = write_package(self.project, self.node_uid, output)
+                verified_count = verified["actual_count"]
+                tags_path = package["tags_path"]
         except (ExportError, OSError) as exc:
             self._error(str(exc))
             return
         self.status_label.setStyleSheet("color: #067647;")
         self.status_label.setText(
             "EXPORT_VERIFIED · "
-            f"{verified['actual_count']} vozlišč · {package['tags_path']}"
+            f"{verified_count} vozlišč · {tags_path}"
         )
+
+    def verify_reexport(self) -> None:
+        if self.node_uid is None:
+            self._error("Najprej izberi vejo, ki je bila uvozena v Ignition.")
+            return
+        path = self.reexport_edit.text().strip()
+        if not path:
+            self._error("Izberi Ignition re-export JSON.")
+            return
+        try:
+            result = verify_ignition_reexport(
+                self.project, self.node_uid, path
+            )
+        except (ExportError, OSError) as exc:
+            self._error(str(exc))
+            return
+        if result["matches"]:
+            self.status_label.setStyleSheet("color: #067647;")
+            self.status_label.setText(
+                "IGNITION_REEXPORT_VERIFIED · "
+                f"{result['actual_count']} vozlišč"
+            )
+        else:
+            self._error(
+                "IGNITION_REEXPORT_MISMATCH · "
+                f"manjka {len(result['missing_paths'])}, "
+                f"dodatnih {len(result['extra_paths'])}, "
+                f"spremenjenih {len(result['changed_paths'])}"
+            )
 
     def _error(self, message: str) -> None:
         self.status_label.setStyleSheet("color: #b42318;")
