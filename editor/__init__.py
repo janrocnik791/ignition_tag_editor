@@ -17,6 +17,13 @@ from .import_service import (  # noqa: F401
     parse_provider_name,
     validate_source,
 )
+from .export import (  # noqa: F401
+    ExportError,
+    canonical_export_bytes,
+    compute_export_scope,
+    serialize_ignition_json,
+    write_package,
+)
 from .project import (  # noqa: F401
     Project,
     ProjectError,
