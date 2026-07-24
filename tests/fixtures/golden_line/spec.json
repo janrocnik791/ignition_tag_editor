@@ -1,0 +1,47 @@
+{
+  "name": "Synthetic Golden Line 01",
+  "site": "golden",
+  "sources": [
+    "../editor_d1/tags_IO_D1.json",
+    "../editor_d1/UDT_Definitions.json",
+    "../editor_d1/tags_UNS_D1.json"
+  ],
+  "manual_confirmation": {
+    "provider": "IO_D1",
+    "path": "Organized/FromRef",
+    "evidence_type": "SOURCE_TAG_PATH_RESOLVED"
+  },
+  "operations": [
+    {
+      "op_type": "RENAME_TAG",
+      "provider": "IO_D1",
+      "path": "Organized/FromRef",
+      "payload": {"new_name": "SpeedPV"}
+    },
+    {
+      "op_type": "UPDATE_PROPERTY",
+      "provider": "IO_D1",
+      "path": "Raw/Temp",
+      "payload": {
+        "key": "documentation",
+        "new_value": "Synthetic golden raw signal"
+      }
+    }
+  ],
+  "export_selection": {"provider": "IO_D1", "path": ""},
+  "expected": {
+    "relationship_total": 14,
+    "relationship_states": {"AMBIGUOUS": 1, "EXACT": 10, "UNRESOLVED": 3},
+    "diff_counts": {
+      "added": 0,
+      "deleted": 0,
+      "moved": 0,
+      "property_changed": 1,
+      "reference_changed": 0,
+      "renamed": 1
+    },
+    "export_scope_nodes": 10,
+    "roundtrip_nodes": 9,
+    "renamed_export_path": "Organized/SpeedPV"
+  }
+}

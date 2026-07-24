@@ -525,6 +525,10 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   metapodatkov). **Kriteriji:** izvoz round-trip-a natančno. **Meja commit-a:** en commit.
 
 ### I. Prva ročno dokončana linija
+- **Status:** zaključeno. Nezaupna sintetična specifikacija `golden_line` požene tri
+  providerje skozi uvoz, exact odkrivanje in ročno potrditev relacije, staged operacije,
+  diff ter omejeni izvoz s semantičnim round-trip preverjanjem. Celotna zbirka:
+  220 zelenih testov.
 - **Cilj:** eno realno linijo pelji end-to-end skozi urejevalnik; ustvari **nezaupno,
   sintetizirano golden** vedenjsko specifikacijo kot regresijske fixture. **Odvisnosti:** H2.
   **Ne-cilji:** avtomatika. **Meja commit-a:** golden fixtures + test.
@@ -652,9 +656,9 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**I – Prva ročno dokončana linija.** Uporabi celoten vertikalni rez na eni
-sintetizirani, nezaupni reprezentativni liniji ter rezultat shrani kot golden vedenjsko
-specifikacijo in regresijski test. Ne commit-aj realnih Calcit podatkov. (A–H zaključeni.)
+**J – Integracija referenčnih podatkov.** Obstoječi `analyzer/reference` priključi kot
+neobvezen kontekst, ki ustvarja sledljive `SUGGESTION` relacije in jih nikoli samodejno ne
+odobri. (A–I zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
