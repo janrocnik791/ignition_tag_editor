@@ -188,15 +188,15 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint H2 — export UI previews scope and writes only after
-  `verify_round_trip` reimports into a fresh temporary project and matches every node,
-  sibling order, and property. The first complete vertical slice is finished.
-- **Active / next:** Checkpoint I — synthetic non-confidential golden line.
+- **Last completed:** Checkpoint I — the committed non-confidential synthetic golden
+  line verifies import, exact/manual relationships, operations, diff, limited export,
+  and semantic round-trip end to end.
+- **Active / next:** Checkpoint J — optional reference-data suggestions.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (219 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (220 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** H2 implemented on `checkpoint-h2` from the merged H1 baseline in
+- **Branch:** I implemented on `checkpoint-i` from the merged H2 baseline in
   `origin/main`.
 - **Blocker:** none.
