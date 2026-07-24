@@ -15,6 +15,7 @@ from editor import (
     create_project,
     import_source,
     serialize_ignition_json,
+    verify_round_trip,
     write_package,
 )
 
@@ -102,3 +103,23 @@ def test_package_manifest_hash_and_udt_warning(tmp_path):
         assert manifest["scope"]["node_count"] == 2
     finally:
         p.close()
+
+
+def test_round_trip_verifies_noop_and_simulated_subtree(project):
+    area1 = _uid(project, "Area1")
+    run = _uid(project, "Area1/Motor1_Run")
+    noop = verify_round_trip(project, area1)
+    assert noop["status"] == "EXPORT_VERIFIED"
+    assert noop["matches"] is True
+    assert noop["expected"] is None
+    assert noop["actual"] is None
+    create_operation(
+        project,
+        "RENAME_TAG",
+        run,
+        {"new_name": "RunState"},
+        "operator",
+    )
+    result = verify_round_trip(project, area1)
+    assert result["status"] == "EXPORT_VERIFIED"
+    assert result["expected_count"] == result["actual_count"] == 3

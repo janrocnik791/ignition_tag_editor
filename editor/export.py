@@ -5,12 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from .project import Project, ProjectError
 from .simulation import SimTree
+from .import_service import import_source
+from .project import create_project
 
 
 class ExportError(ProjectError):
@@ -148,4 +151,79 @@ def write_package(
         "tags_path": tags_path,
         "manifest_path": manifest_path,
         "tags_sha256": manifest["tags_sha256"],
+    }
+
+
+def _flatten_export_tags(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+
+    def walk(node: Dict[str, Any], parent_path: str, sibling_index: int) -> None:
+        name = node.get("name") or ""
+        path = f"{parent_path}/{name}" if parent_path else name
+        properties = deepcopy(node)
+        children = properties.pop("tags", None)
+        rows.append({
+            "path": path,
+            "sibling_index": sibling_index,
+            "properties": properties,
+        })
+        if isinstance(children, list):
+            for index, child in enumerate(children):
+                if isinstance(child, dict):
+                    walk(child, path, index)
+
+    for index, tag in enumerate(payload.get("tags") or []):
+        if isinstance(tag, dict):
+            walk(tag, "", index)
+    return rows
+
+
+def verify_round_trip(
+    project: Project,
+    selection_uid: str,
+) -> Dict[str, Any]:
+    """Ponovno uvozi serializiran JSON in primerja semantiko vozlisce-za-vozlisce."""
+    scope = compute_export_scope(project, selection_uid)
+    payload = serialize_ignition_json(project, scope)
+    expected = _flatten_export_tags(payload)
+    with tempfile.TemporaryDirectory(prefix="ignition-tag-roundtrip-") as tmp:
+        source_path = os.path.join(tmp, "tags_ROUNDTRIP.json")
+        with open(source_path, "wb") as handle:
+            handle.write(canonical_export_bytes(payload))
+        roundtrip = create_project(
+            os.path.join(tmp, "project"),
+            name="Export round-trip",
+        )
+        try:
+            import_source(roundtrip, source_path, site="roundtrip")
+            actual = []
+            for row in roundtrip.conn.execute(
+                "SELECT path_at_import, sibling_index, raw_json "
+                "FROM baseline_nodes WHERE parent_uid IS NOT NULL "
+                "ORDER BY depth, path_at_import, sibling_index, node_uid"
+            ).fetchall():
+                actual.append({
+                    "path": row["path_at_import"],
+                    "sibling_index": row["sibling_index"],
+                    "properties": json.loads(row["raw_json"]),
+                })
+        finally:
+            roundtrip.close()
+    expected_sorted = sorted(
+        expected,
+        key=lambda row: (
+            row["path"].count("/"),
+            row["path"],
+            row["sibling_index"],
+        ),
+    )
+    matches = expected_sorted == actual
+    return {
+        "status": "EXPORT_VERIFIED" if matches else "EXPORT_MISMATCH",
+        "matches": matches,
+        "expected_count": len(expected_sorted),
+        "actual_count": len(actual),
+        "scope": scope,
+        "expected": expected_sorted if not matches else None,
+        "actual": actual if not matches else None,
     }

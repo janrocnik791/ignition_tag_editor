@@ -188,15 +188,15 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint H1 — limited simulated subtrees serialize losslessly for
-  no-op input to deterministic Ignition 8.3 `tags.json`; package manifests include scope,
-  SHA-256, and the required UDT-definition warning. Unrelated branches are excluded.
-- **Active / next:** Checkpoint H2 — export UI and deterministic round-trip.
+- **Last completed:** Checkpoint H2 — export UI previews scope and writes only after
+  `verify_round_trip` reimports into a fresh temporary project and matches every node,
+  sibling order, and property. The first complete vertical slice is finished.
+- **Active / next:** Checkpoint I — synthetic non-confidential golden line.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (215 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (219 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** H1 implemented on `checkpoint-h1` from the merged G3 baseline in
+- **Branch:** H2 implemented on `checkpoint-h2` from the merged H1 baseline in
   `origin/main`.
 - **Blocker:** none.
