@@ -197,22 +197,19 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint D2 — a read-only relationship tab follows persisted D1
-  edges around the selected tree/search tag, orders them as raw IO → organized tag → UDT
-  member → UNS instance, keeps unresolved/ambiguous gaps visible, and shows the full
-  evidence/audit JSON for the selected edge. Traversal is capped at depth 3 and 200 rows;
-  truncation is explicit, and discovery never runs on the UI thread. Real-data check over
-  65,125 persisted relationships: a capped 200-row chain ~0.04 s, one unresolved gap
-  ~0.004 s, full window open ~1.05 s, and zero panel writes. Also done: A, B1, B2, C1,
-  C2, C3, C4, D1; Explorer MVP remains complete.
-- **Active / next:** Checkpoint E1 — persistent manual relationship service
-  (create/confirm/reject/remove and hash validity); do not start without separate user
-  approval.
+- **Last completed:** Checkpoint E1 — persistent manual relationships support direct
+  creation, confirmation, rejection, and logical removal without modifying automatic
+  evidence. Every decision records actor/time/note history and source hashes; validity
+  refresh marks changed anchors `STALE` and restores their prior state after the source
+  content returns. Active manual decisions override automatic relationships and reserved
+  future suggestions. Also done: A, B1, B2, C1, C2, C3, C4, D1, D2; Explorer MVP
+  remains complete.
+- **Active / next:** Checkpoint E2 — UI editor for manual relationships.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery (schema v3: `project_meta`, `sources`, `baseline_nodes`, `relationships`);
-  the test suite passes (155 tests); the GUI can inspect exact relationships but has no
+  the test suite passes (163 tests); the GUI can inspect exact relationships but has no
   manual relationship editor or `operations` yet.
-- **Branch:** D2 implemented on `checkpoint-d2` from the merged D1 baseline in
+- **Branch:** E1 implemented on `checkpoint-e1` from the merged D2 baseline in
   `origin/main`.
 - **Blocker:** none.
