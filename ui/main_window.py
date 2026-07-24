@@ -31,6 +31,7 @@ from editor import (
 
 from .inspector_panel import InspectorPanel
 from .models.tree_model import TreeModel
+from .relationship_panel import RelationshipPanel
 from .search_panel import SearchPanel
 from .udt_panel import UdtPanel
 
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         self._search_panel: Optional[SearchPanel] = None
         self._inspector_panel: Optional[InspectorPanel] = None
         self._udt_panel: Optional[UdtPanel] = None
+        self._relationship_panel: Optional[RelationshipPanel] = None
         self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(1200, 720)
@@ -72,6 +74,10 @@ class MainWindow(QMainWindow):
     @property
     def udt_panel(self) -> Optional[UdtPanel]:
         return self._udt_panel
+
+    @property
+    def relationship_panel(self) -> Optional[RelationshipPanel]:
+        return self._relationship_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -124,9 +130,11 @@ class MainWindow(QMainWindow):
         search_panel = SearchPanel(project, self)
         inspector_panel = InspectorPanel(self)
         udt_panel = UdtPanel(self)
+        relationship_panel = RelationshipPanel(project, self)
         details_tabs = QTabWidget(self)
         details_tabs.addTab(inspector_panel, "Inspektor")
         details_tabs.addTab(udt_panel, "UDT kontekst")
+        details_tabs.addTab(relationship_panel, "Relacije")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
@@ -140,6 +148,7 @@ class MainWindow(QMainWindow):
         self._search_panel = search_panel
         self._inspector_panel = inspector_panel
         self._udt_panel = udt_panel
+        self._relationship_panel = relationship_panel
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
@@ -167,6 +176,7 @@ class MainWindow(QMainWindow):
             or self._udt_context is None
             or self._inspector_panel is None
             or self._udt_panel is None
+            or self._relationship_panel is None
         ):
             return
         try:
@@ -180,6 +190,10 @@ class MainWindow(QMainWindow):
             return
         self._inspector_panel.set_details(details)
         self._udt_panel.set_context(details["udt_context"])
+        self._relationship_panel.set_node(
+            node_uid,
+            details.get("path_at_import"),
+        )
 
     def closeEvent(self, event) -> None:
         if self._project is not None:

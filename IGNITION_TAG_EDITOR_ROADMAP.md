@@ -390,6 +390,15 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   vidno. **Ne-cilji:** predlogi. **Meja commit-a:** en commit.
 
 ### D2. Panel verige relacij
+- **Status:** zaključeno. `ui/relationship_panel.py` doda read-only tabelarni model in
+  panel, ki ob izboru v drevesu ali iskanju sledi shranjenim D1 robovom ter jih uredi
+  kot korake `raw IO → organized IO → UDT član → UNS instanca`. Vsaka vrstica pokaže
+  stanje, smer, provider/site kontekst in vrsto dokaza; izbor vrstice pokaže celoten
+  evidence/audit JSON. `UNRESOLVED` in `AMBIGUOUS` cilji so izpisani kot vidne vrzeli.
+  Obhod je omejen na globino 3 in 200 relacij, omejitev pa je jasno označena. Panel ne
+  zaganja počasnega discoveryja in ne piše v projekt. Celotna zbirka: 155 zelenih
+  testov. Realni projekt s 65.125 relacijami: omejena 200-vrstična veriga ~0,04 s,
+  nerešena vrzel ~0,004 s, odprtje celotnega okna ~1,05 s; nič zapisov panela.
 - **Cilj:** prikaz `raw IO → organized IO → UDT član → UNS instanca` + dokaz + UNRESOLVED.
   **Odvisnosti:** D1. **Datoteke:** `ui/relationship_panel.py`, testi modela. **Kriteriji:**
   za izbran tag se pokaže veriga in dokazi; vrzeli so vidne. **Meja commit-a:** en commit.
@@ -581,11 +590,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**D2 – Panel verige relacij.** Za izbrani tag prikaži read-only verigo
-`raw IO → organized IO → UDT član → UNS instanca`, dokaz vsake povezave ter vidne
-`UNRESOLVED`/`AMBIGUOUS` vrzeli. Uporabi obstoječi `query_relationships`; ne dodajaj
-ročnega urejanja iz E1/E2. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1–C4 in
-D1 so zaključeni.)
+**E1 – Storitev ročnih relacij.** Razširi `editor/relationships.py` z operacijami
+create/confirm/reject/remove, trajnim auditom in preverjanjem veljavnosti proti hash-om
+virov. `MANUAL_CONFIRMED` mora prevladati nad prihodnjimi predlogi. Ne dodajaj UI
+urejevalnika iz E2. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1–C4 in D1–D2
+so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

@@ -48,4 +48,5 @@ def test_open_project_shows_lazy_tree(qtbot, project_path):
     assert window.search_panel is not None
     assert window.inspector_panel is not None
     assert window.udt_panel is not None
+    assert window.relationship_panel is not None
     assert "Okenski test" in window.windowTitle()
