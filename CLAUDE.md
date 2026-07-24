@@ -188,18 +188,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint C1 — headless lazy-tree + details repository
-  (`editor/repository.py`: `get_provider_root`, `get_children(parent_uid, limit, offset)`,
-  `child_count`, `get_node`, `get_parent`, `breadcrumbs`, `full_path`, `node_details`;
-  `tests/test_repository.py`). Read-only over `baseline_nodes`; real-data perf:
-  `get_children(limit=200)` over a 6,701-child node ~10 ms. Also done: A, B1, B2.
-- **Active / next:** Checkpoint C2 — first PySide6 GUI: open-project screen + lazy provider
-  tree (`QTreeView` + custom lazy `QAbstractItemModel` over `editor/repository.py`). Adds
-  PySide6 (runtime) + pytest-qt (dev); GUI isolated in a new `ui/` package.
+- **Last completed:** Checkpoint C2 — first PySide6 GUI with an open-project screen,
+  `QTreeView`, and a paginated custom `QAbstractItemModel` over `editor/repository.py`
+  (`ui/`, `tests/test_ui_tree_model.py`, `tests/test_ui_main_window.py`). The Qt layer is
+  isolated from the headless `editor` package; PySide6 and pytest-qt are declared
+  separately as runtime/dev dependencies. Real-data check over 277,607 nodes: six roots
+  initialized in ~534 ms; first-page expansion at most ~13 ms. Also done: A, B1, B2, C1.
+- **Active / next:** Checkpoint C3 — paginated search and filters by field,
+  provider/site/tag type, with result counts and exact/prefix/contains modes.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, and the read-only repository (schema v1:
-  `project_meta`, `sources`, `baseline_nodes`); the test suite passes (106 tests); no GUI,
-  search (C3), UDT effective resolution (C4), `relationships`, or `operations` yet.
-- **Branch:** C1 implemented on `checkpoint-c1` (off `main`); implement C2 on a focused
-  branch once C1 lands on `main`.
+  `project_meta`, `sources`, `baseline_nodes`); the test suite passes (113 tests); the C2
+  GUI is read-only; no search (C3), UDT effective resolution (C4), `relationships`, or
+  `operations` yet.
+- **Branch:** C2 implemented on `checkpoint-c2` from merged C1 baseline `origin/main`.
 - **Blocker:** none.
