@@ -490,6 +490,11 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Testi:** undo/redo, zvestoba ponovnega odprtja. **Meja commit-a:** en commit.
 
 ### G3. Pogled simuliranega drevesa + diff UI + validacija  → **Editor MVP zaključen**
+- **Status:** zaključeno. Stran `Simulacija` vsebuje lazy efektivno drevo z označenimi
+  spremembami, strukturirani before/after diff z undo/redo kontrolama ter validacijske
+  ugotovitve aktivnega prefiksa. Stage, remove, reorder in undo/redo osvežijo vse
+  poglede. Baseline in simulacija sta ločena. **Editor MVP je zaključen.** Celotna
+  zbirka: 211 zelenih testov.
 - **Cilj:** vizualni sim + before/after diff + validacijske ugotovitve nad sim.
   **Odvisnosti:** G2. **Ponovna uporaba:** `validate.validate` (prilagojen na sim).
   **Datoteke:** `ui/sim_tree_view.py`, `ui/diff_panel.py`, `ui/validation_panel.py`, testi.
@@ -638,11 +643,10 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**G3 – Simulirano drevo, diff in validacija v UI.** Dodaj lazy pogled G1 drevesa,
-strukturiran before/after diff ter ugotovitve validatorja nad aktivnim G2 prefiksom.
-UI mora jasno ločiti baseline in simulacijo ter omogočiti undo/redo brez izgube izbora.
-S tem se zaključi Editor MVP. (B1, B2, C1–C4, D1–D2, E1–E2, F1–F2 in G1–G2 so
-zaključeni.)
+**H1 – Omejen Ignition 8.3 izvoz.** Dodaj izračun obsega, deterministično
+serializacijo in manifest za izbrano simulirano vejo. No-op rekonstrukcija mora biti
+brezizgubna, izvoz pa ne sme vključiti nepovezanih providerjev ali vej. (Editor MVP
+A–G je zaključen.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
