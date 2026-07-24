@@ -123,3 +123,6 @@ def test_tree_selection_updates_inspector(qtbot, project_path):
         line, model.NodeUidRole
     )
     assert window.udt_panel.context["selected_role"] == "instance"
+    assert window.relationship_panel.node_uid == model.data(
+        line, model.NodeUidRole
+    )

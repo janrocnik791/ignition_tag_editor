@@ -197,21 +197,22 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint D1 — schema v3 persists auditable exact relationships;
-  `discover_exact` uses only unique OPC paths, resolved static sourceTagPath references,
-  effective UDT definition membership, and instance type evidence. Missing/dynamic targets
-  remain `UNRESOLVED`, non-unique candidates remain `AMBIGUOUS`, and name equality creates
-  no relationship. `query_relationships` is deterministic, filtered, and paginated.
-  Real-data check over 277,607 nodes: 65,125 relationships (57,059 exact, 8,048 unresolved,
-  18 ambiguous), discovery ~19–27 s, filtered 100-row query ~0.03 s, baseline digest
-  unchanged. Also done: A, B1, B2, C1, C2, C3, C4; Explorer MVP remains complete.
-- **Active / next:** Checkpoint D2 — read-only relationship-chain panel with evidence and
-  visible unresolved gaps; do not start without separate user approval.
+- **Last completed:** Checkpoint D2 — a read-only relationship tab follows persisted D1
+  edges around the selected tree/search tag, orders them as raw IO → organized tag → UDT
+  member → UNS instance, keeps unresolved/ambiguous gaps visible, and shows the full
+  evidence/audit JSON for the selected edge. Traversal is capped at depth 3 and 200 rows;
+  truncation is explicit, and discovery never runs on the UI thread. Real-data check over
+  65,125 persisted relationships: a capped 200-row chain ~0.04 s, one unresolved gap
+  ~0.004 s, full window open ~1.05 s, and zero panel writes. Also done: A, B1, B2, C1,
+  C2, C3, C4, D1; Explorer MVP remains complete.
+- **Active / next:** Checkpoint E1 — persistent manual relationship service
+  (create/confirm/reject/remove and hash validity); do not start without separate user
+  approval.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery (schema v3: `project_meta`, `sources`, `baseline_nodes`, `relationships`);
-  the test suite passes (148 tests); no relationship UI, manual relationships, or
-  `operations` yet.
-- **Branch:** D1 implemented on `checkpoint-d1` from the merged C4 baseline in
+  the test suite passes (155 tests); the GUI can inspect exact relationships but has no
+  manual relationship editor or `operations` yet.
+- **Branch:** D2 implemented on `checkpoint-d2` from the merged D1 baseline in
   `origin/main`.
 - **Blocker:** none.
