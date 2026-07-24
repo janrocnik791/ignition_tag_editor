@@ -479,6 +479,12 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   en commit.
 
 ### G2. Undo/redo + trajnost
+- **Status:** zaključeno. Schema v5 doda `project_meta.operation_cursor`. Aktivni
+  dnevnik je prefiks `seq <= cursor`; `undo`/`redo` spreminjata samo kazalec in
+  ponovno ovrednotita konflikte aktivnega prefiksa. Nova veljavna operacija po undo
+  odstrani redo vejo. Odstranitev in reorder ohranjata skladen kazalec/odvisnosti,
+  v4 migracija pa obstoječi dnevnik aktivira do konca. Save/reopen obnovi isti kazalec,
+  baseline in vse vrstice dnevnika. Celotna zbirka: 207 zelenih testov.
 - **Cilj:** kazalec dnevnika operacij; save/reopen obnovi baseline+relacije+operacije+kazalec.
   **Odvisnosti:** G1. **Datoteke:** razširi `operations.py`, `project.py`, testi.
   **Testi:** undo/redo, zvestoba ponovnega odprtja. **Meja commit-a:** en commit.
@@ -632,11 +638,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**G2 – Undo/redo in trajnost kazalca.** Razširi dnevnik z vztrajnim kazalcem aktivnih
-operacij. `undo` in `redo` morata spreminjati samo kazalec, SimTree/diff pa morata
-upoštevati le aktivni prefiks; nova operacija po undo odstrani redo vejo. Save/reopen
-mora obnoviti baseline, relacije, operacije in isti kazalec. (B1, B2, C1–C4, D1–D2,
-E1–E2, F1–F2 in G1 so zaključeni.)
+**G3 – Simulirano drevo, diff in validacija v UI.** Dodaj lazy pogled G1 drevesa,
+strukturiran before/after diff ter ugotovitve validatorja nad aktivnim G2 prefiksom.
+UI mora jasno ločiti baseline in simulacijo ter omogočiti undo/redo brez izgube izbora.
+S tem se zaključi Editor MVP. (B1, B2, C1–C4, D1–D2, E1–E2, F1–F2 in G1–G2 so
+zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

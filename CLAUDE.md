@@ -188,18 +188,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint G1 — lazy `SimTree`, `sim_children`, `sim_details`, and
-  structured diff expose valid staged operations without writing the project. Added,
-  renamed, moved, property/parameter, reference, and deleted categories are separate;
-  conflicts/deferred rows are explicitly skipped. On 277,607 nodes, lazy children are
-  ~0.0026 s, details ~0.0164 s, and a one-operation diff ~0.0003 s. Also done: A, B1,
-  B2, C1, C2, C3, C4, D1, D2, E1, E2, F1, F2; Explorer MVP remains complete.
-- **Active / next:** Checkpoint G2 — persistent undo/redo cursor.
+- **Last completed:** Checkpoint G2 — schema v5 persists `operation_cursor`; undo/redo
+  changes only the active journal prefix used by SimTree/diff. Conflicts follow the
+  cursor, new work after undo truncates redo, removal/reorder preserve dependencies, and
+  v4 migration activates the existing journal through its end. Reopen restores the same
+  baseline, operations, and cursor. Also done: A, B1, B2, C1, C2, C3, C4, D1, D2, E1,
+  E2, F1, F2, G1.
+- **Active / next:** Checkpoint G3 — simulated tree, diff, and validation UI.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (200 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (207 tests);
   headless services expose the simulated tree/diff, but the GUI does not show them yet.
-- **Branch:** G1 implemented on `checkpoint-g1` from the merged F2 baseline in
+- **Branch:** G2 implemented on `checkpoint-g2` from the merged G1 baseline in
   `origin/main`.
 - **Blocker:** none.
