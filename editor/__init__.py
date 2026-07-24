@@ -26,9 +26,12 @@ from .export import (  # noqa: F401
     ExportError,
     canonical_export_bytes,
     compute_export_scope,
+    compute_full_export_scopes,
     serialize_ignition_json,
     verify_round_trip,
+    verify_ignition_reexport,
     write_package,
+    write_production_package,
 )
 from .project import (  # noqa: F401
     Project,
@@ -108,4 +111,5 @@ from .simulation import (  # noqa: F401
     sim_children,
     sim_details,
 )
+from .validation import validate_project  # noqa: F401
 from .udt_context import ProjectUdtContext  # noqa: F401

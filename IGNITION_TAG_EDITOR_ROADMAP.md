@@ -555,6 +555,15 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   — šele po golden datasetu. **Odvisnosti:** J.
 
 ### L. Napredna validacija + produkcijski izvoz + pakiranje
+- **Status:** zaključeno. Celovita read-only validacija preveri konflikte operacij,
+  podvojene simulirane sorojence, neveljavne path predloge, kritične/stale relacije ter
+  izvorne hashe; v UI se zaradi velikih projektov zažene izrecno. Produkcijski writer
+  podpira omejeni ali polni več-provider paket, obvezni preflight, notranji round-trip,
+  SHA manifeste in prepoved prepisovanja. Uporabniško priložen Ignition re-export se
+  primerja po poteh, vrstnem redu in lastnostih ter poroča konkretne razlike; aplikacija
+  se z Gatewayem ne povezuje. PyInstaller 6.21 onedir Windows paket je bil dejansko
+  zgrajen in prestal smoke-test ter odprtje velikega projekta. Celotna zbirka:
+  232 zelenih testov.
 - **Cilj:** polni/omejeni izvoz, post-import preverjanje iz Ignitiona, PyInstaller pakiranje.
   **Odvisnosti:** K.
 
@@ -651,9 +660,7 @@ preverjanje + en majhen, ročno preverjen realni primer.
 
 ## 22. Odložena funkcionalnost
 
-Izvedba `DELETE_TAG`; referenčni predlogi (J); grupiranje/fuzzy ujemanje (K); polni
-produkcijski izvoz + post-import preverjanje iz Ignitiona + pakiranje (L); večuporabniško/
-cloud.
+Izvedba `DELETE_TAG`; neposredna Gateway integracija; večuporabniško/cloud delovanje.
 
 ## 23. Merljivi kriteriji sprejemljivosti
 
@@ -668,9 +675,8 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**L – Napredna validacija, produkcijski izvoz in pakiranje.** Dodaj polni obseg izvoza,
-preverjanje uporabniško priloženega Ignition re-exporta ter ponovljivo PyInstaller
-pakiranje. (A–K zaključeni.)
+**Roadmap A–L je zaključen.** Naslednji korak je uporabniški sprejemni preizkus celotnega
+programa in nato ločeno prioritetiziranje ugotovljenih popravkov ali novega roadmapa.
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

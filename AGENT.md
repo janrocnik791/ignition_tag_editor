@@ -197,15 +197,17 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint K — deterministic mapping/grouping proposals run
-  before thresholded, margin-checked, hard-bounded fuzzy suggestions; none auto-approve.
-- **Active / next:** Checkpoint L — advanced validation, full/limited production export,
-  supplied Ignition re-export verification, and PyInstaller packaging.
+- **Last completed:** Checkpoint L — advanced explicit validation, safe limited/full
+  production export, supplied Ignition re-export comparison, and a verified Windows
+  PyInstaller onedir bundle. Roadmap A–L is complete.
+- **Active / next:** User acceptance testing, then separately scoped fixes or a new
+  roadmap.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
-  discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (226 tests);
+  discovery and staged operation services (schema v5: `project_meta`, `sources`,
+  `baseline_nodes`, `relationships`, `operations`, persistent operation cursor); the
+  test suite passes (232 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** K implemented on `checkpoint-k` from the merged J baseline in
+- **Branch:** L implemented on `checkpoint-l` from the merged K baseline in
   `origin/main`.
 - **Blocker:** none.

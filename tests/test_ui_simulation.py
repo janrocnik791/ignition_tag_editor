@@ -87,6 +87,11 @@ def test_validation_surfaces_conflicts(qtbot, project):
     qtbot.addWidget(panel)
     assert "Validacijske ugotovitve: 2" == panel.summary.text()
     assert "ERROR · CONFLICT" in panel.view.toPlainText()
+    qtbot.mouseClick(
+        panel.advanced_button, Qt.MouseButton.LeftButton
+    )
+    assert "Celovita validacija: INVALID" in panel.summary.text()
+    assert "OPERATION_CONFLICT" in panel.view.toPlainText()
 
 
 def test_main_window_exposes_and_refreshes_simulation(qtbot, tmp_path):
