@@ -309,6 +309,14 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
 - **Meja commit-a:** en commit. **Ročno:** poženi poizvedbe iz Python REPL.
 
 ### C2. PySide6 lupina + lazy provider drevo
+- **Status:** zaključeno. Implementirano v izoliranem paketu `ui/`: zagonska točka
+  `ui/app.py`, open-project lupina in `QTreeView` v `ui/main_window.py`, paginiran
+  `TreeModel(QAbstractItemModel)` v `ui/models/tree_model.py`. Odvisnosti so ločene v
+  `requirements.txt` (runtime) in `requirements-dev.txt` (pytest/pytest-qt). Headless testi
+  modela in okna so v `tests/test_ui_tree_model.py` ter `tests/test_ui_main_window.py`;
+  celotna zbirka ima 113 zelenih testov. Preverjeno na realnem projektu z 277.607 vozlišči:
+  inicializacija šestih provider korenov ~534 ms, najpočasnejši fetch prve strani 200
+  otrok ~13 ms; celotno drevo se ne naloži v pomnilnik.
 - **Cilj:** minimalni UI, ki dokaže arhitekturo. **Viden rezultat:** odpri projekt, razširi
   velika drevesa brez zmrznitve.
 - **Zakaj zdaj:** prva povratna zanka. **Odvisnosti:** C1.
@@ -543,12 +551,10 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**C2 – PySide6 lupina + lazy provider drevo.** Prvi grafični vmesnik: zagonski/open-project
-zaslon in provider drevo prek `QTreeView` + lasten lazy `QAbstractItemModel` nad
-`editor/repository.py` (`get_children`/`child_count` na zahtevo). Dodaj odvisnost
-**PySide6** (runtime) in **pytest-qt** (dev); GUI izoliran v paketu `ui/`. Minimum, ki
-dokaže arhitekturo na 277k vozliščih. Izvede se **šele po ločeni instrukciji**. (B1, B2,
-C1 so zaključeni.)
+**C3 – Iskanje in filtri.** Razširi read-only repozitorij ter UI z iskanjem po izbranem
+polju, filtri provider/site/tag_type, skupnim številom zadetkov in paginirano prvo stranjo.
+Podprti načini so exact/prefix/contains; cilj za count + prvo stran na 277k vozliščih je
+< ~500 ms. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1 in C2 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
