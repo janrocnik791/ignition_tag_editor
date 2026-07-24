@@ -30,13 +30,16 @@ from editor import (
 )
 
 from .inspector_panel import InspectorPanel
+from .diff_panel import DiffPanel
 from .manual_link_editor import ManualLinkEditor
 from .models.tree_model import TreeModel
 from .operation_editor import OperationEditor
 from .relationship_panel import RelationshipPanel
 from .search_panel import SearchPanel
+from .sim_tree_view import SimTreeView
 from .staged_changes_panel import StagedChangesPanel
 from .udt_panel import UdtPanel
+from .validation_panel import ValidationPanel
 
 
 class MainWindow(QMainWindow):
@@ -52,6 +55,9 @@ class MainWindow(QMainWindow):
         self._manual_link_editor: Optional[ManualLinkEditor] = None
         self._operation_editor: Optional[OperationEditor] = None
         self._staged_changes_panel: Optional[StagedChangesPanel] = None
+        self._sim_tree_view: Optional[SimTreeView] = None
+        self._diff_panel: Optional[DiffPanel] = None
+        self._validation_panel: Optional[ValidationPanel] = None
         self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(1200, 720)
@@ -96,6 +102,18 @@ class MainWindow(QMainWindow):
     @property
     def staged_changes_panel(self) -> Optional[StagedChangesPanel]:
         return self._staged_changes_panel
+
+    @property
+    def sim_tree_view(self) -> Optional[SimTreeView]:
+        return self._sim_tree_view
+
+    @property
+    def diff_panel(self) -> Optional[DiffPanel]:
+        return self._diff_panel
+
+    @property
+    def validation_panel(self) -> Optional[ValidationPanel]:
+        return self._validation_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -157,12 +175,20 @@ class MainWindow(QMainWindow):
         operation_workspace.addWidget(staged_changes_panel)
         operation_workspace.setStretchFactor(0, 1)
         operation_workspace.setStretchFactor(1, 1)
+        sim_tree_view = SimTreeView(project, self)
+        diff_panel = DiffPanel(project, self)
+        validation_panel = ValidationPanel(project, self)
+        simulation_tabs = QTabWidget(self)
+        simulation_tabs.addTab(sim_tree_view, "Simulirano drevo")
+        simulation_tabs.addTab(diff_panel, "Diff")
+        simulation_tabs.addTab(validation_panel, "Validacija")
         details_tabs = QTabWidget(self)
         details_tabs.addTab(inspector_panel, "Inspektor")
         details_tabs.addTab(udt_panel, "UDT kontekst")
         details_tabs.addTab(relationship_panel, "Relacije")
         details_tabs.addTab(manual_link_editor, "Ročne povezave")
         details_tabs.addTab(operation_workspace, "Stage-ane spremembe")
+        details_tabs.addTab(simulation_tabs, "Simulacija")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
@@ -180,6 +206,9 @@ class MainWindow(QMainWindow):
         self._manual_link_editor = manual_link_editor
         self._operation_editor = operation_editor
         self._staged_changes_panel = staged_changes_panel
+        self._sim_tree_view = sim_tree_view
+        self._diff_panel = diff_panel
+        self._validation_panel = validation_panel
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
@@ -191,10 +220,14 @@ class MainWindow(QMainWindow):
             self._refresh_relationship_views
         )
         operation_editor.operationCreated.connect(
-            lambda operation_uid: staged_changes_panel.refresh(
-                select_uid=operation_uid
+            lambda operation_uid: self._refresh_simulation_views(
+                operation_uid
             )
         )
+        staged_changes_panel.operationsChanged.connect(
+            self._refresh_simulation_views
+        )
+        diff_panel.stateChanged.connect(self._refresh_simulation_views)
 
         if old_project is not None:
             old_project.close()
@@ -243,6 +276,19 @@ class MainWindow(QMainWindow):
             node_uid,
             details.get("path_at_import"),
         )
+
+    def _refresh_simulation_views(
+        self,
+        operation_uid: Optional[str] = None,
+    ) -> None:
+        if self._staged_changes_panel is not None:
+            self._staged_changes_panel.refresh(select_uid=operation_uid)
+        if self._sim_tree_view is not None:
+            self._sim_tree_view.refresh()
+        if self._diff_panel is not None:
+            self._diff_panel.refresh()
+        if self._validation_panel is not None:
+            self._validation_panel.refresh()
 
     def _refresh_relationship_views(self) -> None:
         if (
