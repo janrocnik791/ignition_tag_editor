@@ -7,8 +7,8 @@ cakajoce migracije. Baseline se s poznejsimi migracijami nikoli ne prepise.
 
 Mejnik B1 ustvari v1 shemo: ``project_meta``, ``sources``, ``baseline_nodes``.
 C3 doda v2 iskalne indekse brez spremembe baseline vrstic.
-D1 doda v3 tabelo ``relationships`` brez spremembe baseline vrstic. Tabela
-``operations`` (mejnik F1) dobi svojo migracijo pozneje.
+D1 doda v3 tabelo ``relationships`` brez spremembe baseline vrstic. F1 doda
+v4 tabelo ``operations``, prav tako brez spremembe baseline vrstic.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import sqlite3
 from typing import Callable, List, Tuple
 
 # Trenutna ciljna verzija sheme.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Identifikator aplikacije, shranjen v project_meta (locevanje tujih .sqlite).
 APP_ID = "ignition_tag_editor"
@@ -158,11 +158,43 @@ def _migration_v3(conn: sqlite3.Connection) -> None:
     conn.executescript(_V3_SQL)
 
 
+# ---- v4: F1 dnevnik operacij delovne kopije -----------------------------
+
+_V4_SQL = """
+CREATE TABLE operations (
+    operation_uid    TEXT PRIMARY KEY,
+    seq              INTEGER NOT NULL,
+    op_type          TEXT NOT NULL,
+    target_node_uid  TEXT NOT NULL,
+    payload_json     TEXT NOT NULL,
+    original_json    TEXT NOT NULL,
+    status           TEXT NOT NULL,
+    reason           TEXT,
+    created_by       TEXT NOT NULL,
+    created_at       TEXT NOT NULL,
+    depends_on_json  TEXT NOT NULL,
+    conflict_info    TEXT
+);
+
+CREATE INDEX idx_operations_seq
+    ON operations(seq, operation_uid);
+CREATE INDEX idx_operations_target
+    ON operations(target_node_uid, op_type, status, seq);
+CREATE INDEX idx_operations_status
+    ON operations(status, seq, operation_uid);
+"""
+
+
+def _migration_v4(conn: sqlite3.Connection) -> None:
+    conn.executescript(_V4_SQL)
+
+
 # Urejen seznam (verzija, funkcija). Dodaj nove migracije na konec.
 MIGRATIONS: List[Tuple[int, Callable[[sqlite3.Connection], None]]] = [
     (1, _migration_v1),
     (2, _migration_v2),
     (3, _migration_v3),
+    (4, _migration_v4),
 ]
 
 
