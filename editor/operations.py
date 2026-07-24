@@ -855,6 +855,13 @@ def create_operation(
                     *conflicting_uids,
                 ),
             )
+            revalidated = validate_operation(
+                project,
+                operation["op_type"],
+                operation["target_node_uid"],
+                operation["payload"],
+            )
+            operation["original"] = revalidated["original"]
         project.conn.execute(
             "INSERT INTO operations ("
             "operation_uid, seq, op_type, target_node_uid, payload_json, "
@@ -999,6 +1006,77 @@ def reorder_operation(
             project.conn.execute(
                 "UPDATE operations SET seq = ? WHERE operation_uid = ?",
                 (seq, item["operation_uid"]),
+            )
+    return list_operations(project)
+
+
+def _refresh_conflict_groups(project: Project) -> None:
+    operations = list_operations(project)
+    candidates = [
+        operation
+        for operation in operations
+        if operation["status"] in ("VALID", "CONFLICT")
+    ]
+    groups: Dict[Tuple[str, str], List[str]] = {}
+    for operation in candidates:
+        key = _operation_conflict_key(operation)
+        if key is not None:
+            groups.setdefault(
+                (operation["target_node_uid"], key), []
+            ).append(operation["operation_uid"])
+    with project.conn:
+        project.conn.execute(
+            "UPDATE operations SET status='VALID', reason=NULL, "
+            "conflict_info=NULL WHERE status='CONFLICT'"
+        )
+        for (target_uid, key), operation_uids in groups.items():
+            if len(operation_uids) < 2:
+                continue
+            conflict = {
+                "key": key,
+                "operation_uids": sorted(operation_uids),
+            }
+            placeholders = ",".join("?" for _ in operation_uids)
+            project.conn.execute(
+                "UPDATE operations SET status='CONFLICT', reason=?, "
+                "conflict_info=? WHERE operation_uid IN "
+                f"({placeholders})",
+                (
+                    f"Vec operacij spreminja {key} istega vozlisca",
+                    _canonical_json(conflict),
+                    *operation_uids,
+                ),
+            )
+
+
+def remove_operation(
+    project: Project,
+    operation_uid: str,
+) -> List[Dict[str, Any]]:
+    """Odstrani stage-an korak, ce nobena druga operacija ni odvisna od njega."""
+    get_operation(project, operation_uid)
+    dependents = [
+        operation["operation_uid"]
+        for operation in list_operations(project)
+        if operation_uid in operation["depends_on"]
+    ]
+    if dependents:
+        raise OperationError(
+            "Operacije ni mogoce odstraniti; odvisne operacije: "
+            + ", ".join(dependents)
+        )
+    with project.conn:
+        project.conn.execute(
+            "DELETE FROM operations WHERE operation_uid = ?",
+            (operation_uid,),
+        )
+    _refresh_conflict_groups(project)
+    operations = list_operations(project)
+    with project.conn:
+        for seq, operation in enumerate(operations, 1):
+            project.conn.execute(
+                "UPDATE operations SET seq = ? WHERE operation_uid = ?",
+                (seq, operation["operation_uid"]),
             )
     return list_operations(project)
 

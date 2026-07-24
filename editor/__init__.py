@@ -38,6 +38,7 @@ from .operations import (  # noqa: F401
     list_operations,
     load_baseline_state,
     ordered_operations,
+    remove_operation,
     reorder_operation,
     validate_operation,
 )

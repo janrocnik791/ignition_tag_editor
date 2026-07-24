@@ -32,8 +32,10 @@ from editor import (
 from .inspector_panel import InspectorPanel
 from .manual_link_editor import ManualLinkEditor
 from .models.tree_model import TreeModel
+from .operation_editor import OperationEditor
 from .relationship_panel import RelationshipPanel
 from .search_panel import SearchPanel
+from .staged_changes_panel import StagedChangesPanel
 from .udt_panel import UdtPanel
 
 
@@ -48,6 +50,8 @@ class MainWindow(QMainWindow):
         self._udt_panel: Optional[UdtPanel] = None
         self._relationship_panel: Optional[RelationshipPanel] = None
         self._manual_link_editor: Optional[ManualLinkEditor] = None
+        self._operation_editor: Optional[OperationEditor] = None
+        self._staged_changes_panel: Optional[StagedChangesPanel] = None
         self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(1200, 720)
@@ -84,6 +88,14 @@ class MainWindow(QMainWindow):
     @property
     def manual_link_editor(self) -> Optional[ManualLinkEditor]:
         return self._manual_link_editor
+
+    @property
+    def operation_editor(self) -> Optional[OperationEditor]:
+        return self._operation_editor
+
+    @property
+    def staged_changes_panel(self) -> Optional[StagedChangesPanel]:
+        return self._staged_changes_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -138,11 +150,19 @@ class MainWindow(QMainWindow):
         udt_panel = UdtPanel(self)
         relationship_panel = RelationshipPanel(project, self)
         manual_link_editor = ManualLinkEditor(project, self)
+        operation_editor = OperationEditor(project, self)
+        staged_changes_panel = StagedChangesPanel(project, self)
+        operation_workspace = QSplitter(Qt.Orientation.Vertical, self)
+        operation_workspace.addWidget(operation_editor)
+        operation_workspace.addWidget(staged_changes_panel)
+        operation_workspace.setStretchFactor(0, 1)
+        operation_workspace.setStretchFactor(1, 1)
         details_tabs = QTabWidget(self)
         details_tabs.addTab(inspector_panel, "Inspektor")
         details_tabs.addTab(udt_panel, "UDT kontekst")
         details_tabs.addTab(relationship_panel, "Relacije")
         details_tabs.addTab(manual_link_editor, "Ročne povezave")
+        details_tabs.addTab(operation_workspace, "Stage-ane spremembe")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
@@ -158,6 +178,8 @@ class MainWindow(QMainWindow):
         self._udt_panel = udt_panel
         self._relationship_panel = relationship_panel
         self._manual_link_editor = manual_link_editor
+        self._operation_editor = operation_editor
+        self._staged_changes_panel = staged_changes_panel
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
@@ -167,6 +189,11 @@ class MainWindow(QMainWindow):
         search_panel.nodeSelected.connect(self._show_node)
         manual_link_editor.relationshipsChanged.connect(
             self._refresh_relationship_views
+        )
+        operation_editor.operationCreated.connect(
+            lambda operation_uid: staged_changes_panel.refresh(
+                select_uid=operation_uid
+            )
         )
 
         if old_project is not None:
@@ -190,6 +217,7 @@ class MainWindow(QMainWindow):
             or self._udt_panel is None
             or self._relationship_panel is None
             or self._manual_link_editor is None
+            or self._operation_editor is None
         ):
             return
         try:
@@ -208,6 +236,10 @@ class MainWindow(QMainWindow):
             details.get("path_at_import"),
         )
         self._manual_link_editor.set_node(
+            node_uid,
+            details.get("path_at_import"),
+        )
+        self._operation_editor.set_node(
             node_uid,
             details.get("path_at_import"),
         )
