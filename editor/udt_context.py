@@ -127,6 +127,28 @@ class ProjectUdtContext:
             current = row["node_uid"]
         return current
 
+    def effective_member_uid(
+        self,
+        site: str,
+        type_key: str,
+        relative_path: Sequence[str],
+    ) -> Optional[str]:
+        """Vrni vozlisce najblizje efektivne definicije za pot clana.
+
+        Verigo pregleduje od izpeljanega tipa proti osnovnim tipom, zato lokalni
+        override zmaga, podedovani clan pa se razresi na svojo izvorno definicijo.
+        """
+        for key in self.registry.inheritance_chain(site, type_key):
+            record = self.registry.canonical_get(site, key)
+            if record is None:
+                continue
+            node_uid = self._definition_member_uid(
+                str(record.id), relative_path
+            )
+            if node_uid is not None:
+                return node_uid
+        return None
+
     def _definition_properties(
         self,
         site: str,

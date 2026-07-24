@@ -369,6 +369,17 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   klikni UDT instanco, preveri efektivne člane.
 
 ### D1. Odkrivanje exact relacij
+- **Status:** zaključeno. Schema v3 doda tabelo `relationships` in indekse brez
+  spremembe baseline vrstic. `editor/relationships.py` deterministično in idempotentno
+  odkriva štiri dovoljene avtomatske dokaze: enolični IO kandidat za `opcItemPath`,
+  statično razrešen `sourceTagPath` z lokacijo/providerjem, efektivno članstvo UDT z
+  dedovanjem ter `typeId` instance. Referencirani tag je pri razrešenem
+  `sourceTagPath` usmerjen proti tagu z bindingom; več kandidatov se ne izbira, ampak
+  zapiše kot `AMBIGUOUS`, manjkajoč ali dinamičen cilj pa kot `UNRESOLVED`. Enako ime
+  ni dokaz. `query_relationships` podpira filtre, kontekst obeh vozlišč in strani do
+  500 vrstic. Celotna zbirka: 148 zelenih testov. Realni projekt (277.607 vozlišč):
+  65.125 relacij (57.059 exact, 8.048 unresolved, 18 ambiguous), discovery ~19–27 s,
+  filtrirana stran 100 vrstic ~0,03 s; baseline digest pred/po je enak.
 - **Cilj:** samo dokazljive relacije + eksplicitno UNRESOLVED. **Odvisnosti:** C4.
 - **Ponovna uporaba:** `udt_resolver`, `opc_multiplicity` vzorci iz Faze 0.
 - **Datoteke:** `editor/relationships.py`, `tests/test_relationships.py`.
@@ -570,11 +581,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**D1 – Odkrivanje exact relacij.** Dodaj samo dokazljive relacije z evidenco in
-eksplicitnima stanjema `UNRESOLVED`/`AMBIGUOUS`; ime samo ni dokaz in hevristike ostanejo
-izven obsega. Uvedi verzionirano tabelo `relationships`, storitvi `discover_exact(project)`
-in `query_relationships` ter teste za vsak dokazni tip in mejne primere. Izvede se **šele
-po ločeni instrukciji**. (B1, B2 in C1–C4 so zaključeni; Explorer MVP je končan.)
+**D2 – Panel verige relacij.** Za izbrani tag prikaži read-only verigo
+`raw IO → organized IO → UDT član → UNS instanca`, dokaz vsake povezave ter vidne
+`UNRESOLVED`/`AMBIGUOUS` vrzeli. Uporabi obstoječi `query_relationships`; ne dodajaj
+ročnega urejanja iz E1/E2. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1–C4 in
+D1 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

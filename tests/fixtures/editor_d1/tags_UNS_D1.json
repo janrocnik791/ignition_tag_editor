@@ -1,0 +1,44 @@
+{
+  "name": "",
+  "tagType": "Provider",
+  "tags": [
+    {
+      "name": "DirectOpc",
+      "tagType": "AtomicTag",
+      "dataType": "Float4",
+      "valueSource": "opc",
+      "opcItemPath": "ns=1;s=[PLC]Temp"
+    },
+    {
+      "name": "AmbiguousOpc",
+      "tagType": "AtomicTag",
+      "dataType": "Float4",
+      "valueSource": "opc",
+      "opcItemPath": "ns=1;s=[PLC]Shared"
+    },
+    {
+      "name": "MissingOpc",
+      "tagType": "AtomicTag",
+      "dataType": "Float4",
+      "valueSource": "opc",
+      "opcItemPath": "ns=1;s=[PLC]Missing"
+    },
+    {
+      "name": "Motor1",
+      "tagType": "UdtInstance",
+      "typeId": "MotorUDT",
+      "tags": [
+        {
+          "name": "Speed",
+          "tagType": "AtomicTag",
+          "documentation": "Local override"
+        }
+      ]
+    },
+    {
+      "name": "Unknown1",
+      "tagType": "UdtInstance",
+      "typeId": "UnknownUDT"
+    }
+  ]
+}

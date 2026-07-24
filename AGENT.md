@@ -197,18 +197,21 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint C4 — read-only inspector with raw/effective properties,
-  extracted OPC/sourceTagPath/typeId fields and source provenance, plus a site-aware UDT
-  panel with members, parameters, and inheritance. Tree and search selections update both
-  panels. The implementation reuses `analyzer.udt_resolver.UdtRegistry`; no schema change
-  was required. Real-data check over 277,607 nodes: resolver build ~0.059 s, selected-node
-  details ~0.0028 s, full window open ~0.841 s, and C4 writes zero rows. Explorer MVP is
-  complete. Also done: A, B1, B2, C1, C2, C3.
-- **Active / next:** Checkpoint D1 — exact relationship discovery with explicit unresolved
-  and ambiguous states; do not start without separate user approval.
+- **Last completed:** Checkpoint D1 — schema v3 persists auditable exact relationships;
+  `discover_exact` uses only unique OPC paths, resolved static sourceTagPath references,
+  effective UDT definition membership, and instance type evidence. Missing/dynamic targets
+  remain `UNRESOLVED`, non-unique candidates remain `AMBIGUOUS`, and name equality creates
+  no relationship. `query_relationships` is deterministic, filtered, and paginated.
+  Real-data check over 277,607 nodes: 65,125 relationships (57,059 exact, 8,048 unresolved,
+  18 ambiguous), discovery ~19–27 s, filtered 100-row query ~0.03 s, baseline digest
+  unchanged. Also done: A, B1, B2, C1, C2, C3, C4; Explorer MVP remains complete.
+- **Active / next:** Checkpoint D2 — read-only relationship-chain panel with evidence and
+  visible unresolved gaps; do not start without separate user approval.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
-  provides project lifecycle, baseline import, and the read-only repository (schema v2:
-  `project_meta`, `sources`, `baseline_nodes` + C3 search indexes); the test suite passes
-  (135 tests); the GUI remains read-only; no `relationships` or `operations` yet.
-- **Branch:** C4 implemented on `checkpoint-c4` from the C3 baseline in `origin/main`.
+  provides project lifecycle, baseline import, read-only exploration, and exact relation
+  discovery (schema v3: `project_meta`, `sources`, `baseline_nodes`, `relationships`);
+  the test suite passes (148 tests); no relationship UI, manual relationships, or
+  `operations` yet.
+- **Branch:** D1 implemented on `checkpoint-d1` from the merged C4 baseline in
+  `origin/main`.
 - **Blocker:** none.

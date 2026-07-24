@@ -7,9 +7,8 @@ cakajoce migracije. Baseline se s poznejsimi migracijami nikoli ne prepise.
 
 Mejnik B1 ustvari v1 shemo: ``project_meta``, ``sources``, ``baseline_nodes``.
 C3 doda v2 iskalne indekse brez spremembe baseline vrstic.
-Tabeli ``relationships`` (mejnik D1) in ``operations`` (mejnik F1) dodata svoji
-migraciji pozneje -- tu jih namerno se ne ustvarimo (brez scaffoldinga za kasnejse
-mejnike).
+D1 doda v3 tabelo ``relationships`` brez spremembe baseline vrstic. Tabela
+``operations`` (mejnik F1) dobi svojo migracijo pozneje.
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ import sqlite3
 from typing import Callable, List, Tuple
 
 # Trenutna ciljna verzija sheme.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Identifikator aplikacije, shranjen v project_meta (locevanje tujih .sqlite).
 APP_ID = "ignition_tag_editor"
@@ -119,10 +118,51 @@ def _migration_v2(conn: sqlite3.Connection) -> None:
     conn.executescript(_V2_SQL)
 
 
+# ---- v3: D1 exact relacije ----------------------------------------------
+
+_V3_SQL = """
+CREATE TABLE relationships (
+    relationship_uid    TEXT PRIMARY KEY,
+    source_node_uid     TEXT NOT NULL,
+    target_node_uid     TEXT,
+    role                TEXT NOT NULL,
+    state               TEXT NOT NULL,
+    evidence_type       TEXT NOT NULL,
+    evidence_json       TEXT NOT NULL,
+    origin              TEXT NOT NULL,
+    confidence          REAL,
+    confirmed_by        TEXT,
+    confirmed_at        TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL,
+    source_hashes_json  TEXT NOT NULL
+);
+
+CREATE INDEX idx_relationships_source
+    ON relationships(source_node_uid, role, state, evidence_type);
+CREATE INDEX idx_relationships_target
+    ON relationships(target_node_uid, role, state, evidence_type)
+    WHERE target_node_uid IS NOT NULL;
+CREATE INDEX idx_relationships_state
+    ON relationships(state, evidence_type, origin, relationship_uid);
+CREATE INDEX idx_relationships_filter_state
+    ON relationships(state, relationship_uid);
+CREATE INDEX idx_relationships_filter_evidence
+    ON relationships(evidence_type, relationship_uid);
+CREATE INDEX idx_relationships_filter_role
+    ON relationships(role, relationship_uid);
+"""
+
+
+def _migration_v3(conn: sqlite3.Connection) -> None:
+    conn.executescript(_V3_SQL)
+
+
 # Urejen seznam (verzija, funkcija). Dodaj nove migracije na konec.
 MIGRATIONS: List[Tuple[int, Callable[[sqlite3.Connection], None]]] = [
     (1, _migration_v1),
     (2, _migration_v2),
+    (3, _migration_v3),
 ]
 
 

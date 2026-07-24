@@ -25,6 +25,15 @@ from .project import (  # noqa: F401
     open_project,
     recover,
 )
+from .relationships import (  # noqa: F401
+    EVIDENCE_TYPES,
+    ORIGINS,
+    RELATIONSHIP_ROLES,
+    RELATIONSHIP_STATES,
+    RelationshipError,
+    discover_exact,
+    query_relationships,
+)
 from .repository import (  # noqa: F401
     MAX_SEARCH_PAGE_SIZE,
     RepositoryError,

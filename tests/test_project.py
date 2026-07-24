@@ -39,21 +39,55 @@ def test_create_project_builds_current_schema(tmp_path):
         assert os.path.exists(p.db_path)
         assert p.name == "Test projekt"
         assert p.project_uid  # dodeljen
-        assert p.schema_version == SCHEMA_VERSION == 2
+        assert p.schema_version == SCHEMA_VERSION == 3
     finally:
         p.close()
 
     tables = _tables(p.db_path)
-    assert {"project_meta", "sources", "baseline_nodes"} <= tables
-    # relationships/operations se namerno se NE ustvarita v B1 (D1/F1).
-    assert "relationships" not in tables
+    assert {"project_meta", "sources", "baseline_nodes", "relationships"} <= tables
+    # operations se namerno se NE ustvari pred F1.
     assert "operations" not in tables
 
     conn = sqlite3.connect(p.db_path)
     try:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
         assert conn.execute("SELECT COUNT(*) FROM sources").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM baseline_nodes").fetchone()[0] == 0
+        relationship_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(relationships)"
+            ).fetchall()
+        }
+        assert {
+            "relationship_uid",
+            "source_node_uid",
+            "target_node_uid",
+            "role",
+            "state",
+            "evidence_type",
+            "evidence_json",
+            "origin",
+            "confidence",
+            "confirmed_by",
+            "confirmed_at",
+            "created_at",
+            "updated_at",
+            "source_hashes_json",
+        } == relationship_columns
+        relationship_indexes = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA index_list(relationships)"
+            ).fetchall()
+        }
+        assert {
+            "idx_relationships_source",
+            "idx_relationships_target",
+            "idx_relationships_filter_state",
+            "idx_relationships_filter_evidence",
+            "idx_relationships_filter_role",
+        } <= relationship_indexes
         appid = conn.execute("SELECT app_id FROM project_meta WHERE id=1").fetchone()[0]
         assert appid == APP_ID
     finally:
@@ -161,7 +195,7 @@ def test_schema_newer_than_supported_raises(tmp_path):
         open_project(d)
 
 
-def test_v1_project_migrates_to_v2_search_indexes(tmp_path):
+def test_v1_project_migrates_through_v3(tmp_path):
     d = str(tmp_path / "proj")
     p = create_project(d, name="Starejsi")
     db = p.db_path
@@ -177,6 +211,7 @@ def test_v1_project_migrates_to_v2_search_indexes(tmp_path):
     ]
     for index_name in search_indexes:
         conn.execute(f'DROP INDEX "{index_name}"')
+    conn.execute("DROP TABLE relationships")
     conn.execute("PRAGMA user_version = 1")
     conn.execute("UPDATE project_meta SET schema_version = 1 WHERE id = 1")
     conn.commit()
@@ -184,7 +219,7 @@ def test_v1_project_migrates_to_v2_search_indexes(tmp_path):
 
     migrated = open_project(d)
     try:
-        assert migrated.schema_version == 2
+        assert migrated.schema_version == 3
         indexes = {
             row[0]
             for row in migrated.conn.execute(
@@ -197,6 +232,54 @@ def test_v1_project_migrates_to_v2_search_indexes(tmp_path):
             "idx_baseline_search_name",
             "idx_baseline_search_tag_type",
         } <= indexes
+        assert "relationships" in _tables(db)
+    finally:
+        migrated.close()
+
+
+def test_v2_project_migrates_relationships_without_rewriting_baseline(tmp_path):
+    d = str(tmp_path / "proj")
+    p = create_project(d, name="V2")
+    p.conn.execute(
+        "INSERT INTO sources "
+        "(path, sha256, provider_name, site, kind) "
+        "VALUES ('synthetic.json', 'abc', 'P', 's', 'io')"
+    )
+    source_id = p.conn.execute(
+        "SELECT id FROM sources WHERE provider_name = 'P'"
+    ).fetchone()["id"]
+    p.conn.execute(
+        "INSERT INTO baseline_nodes "
+        "(node_uid, provider_uid, parent_uid, sibling_index, depth, "
+        "path_at_import, name, tag_type, raw_json, source_id) "
+        "VALUES ('node-1', 'provider-1', NULL, 0, 0, '', '', "
+        "'Provider', '{\"name\":\"\"}', ?)",
+        (source_id,),
+    )
+    before = tuple(
+        p.conn.execute(
+            "SELECT node_uid, raw_json FROM baseline_nodes"
+        ).fetchone()
+    )
+    p.conn.execute("DROP TABLE relationships")
+    p.conn.execute("PRAGMA user_version = 2")
+    p.conn.execute(
+        "UPDATE project_meta SET schema_version = 2 WHERE id = 1"
+    )
+    p.conn.commit()
+    db = p.db_path
+    p.close()
+
+    migrated = open_project(db)
+    try:
+        after = tuple(
+            migrated.conn.execute(
+                "SELECT node_uid, raw_json FROM baseline_nodes"
+            ).fetchone()
+        )
+        assert migrated.schema_version == 3
+        assert before == after
+        assert "relationships" in _tables(db)
     finally:
         migrated.close()
 

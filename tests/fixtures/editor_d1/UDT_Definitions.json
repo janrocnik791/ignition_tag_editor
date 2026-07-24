@@ -1,0 +1,38 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "BaseUDT",
+      "tagType": "UdtType",
+      "tags": [
+        {
+          "name": "BaseMember",
+          "tagType": "AtomicTag",
+          "dataType": "Boolean"
+        }
+      ]
+    },
+    {
+      "name": "MotorUDT",
+      "tagType": "UdtType",
+      "typeId": "BaseUDT",
+      "tags": [
+        {
+          "name": "Speed",
+          "tagType": "AtomicTag",
+          "dataType": "Float4",
+          "sourceTagPath": {
+            "bindType": "Tag",
+            "binding": "[IO_D1]Raw/Temp"
+          }
+        },
+        {
+          "name": "SameNameOnly",
+          "tagType": "AtomicTag",
+          "dataType": "Boolean"
+        }
+      ]
+    }
+  ]
+}
