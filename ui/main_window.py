@@ -13,15 +13,26 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSplitter,
+    QTabWidget,
     QTreeView,
     QVBoxLayout,
     QWidget,
 )
 
-from editor import Project, ProjectError, ProjectSchemaError, open_project
+from editor import (
+    Project,
+    ProjectError,
+    ProjectSchemaError,
+    ProjectUdtContext,
+    RepositoryError,
+    node_details,
+    open_project,
+)
 
+from .inspector_panel import InspectorPanel
 from .models.tree_model import TreeModel
 from .search_panel import SearchPanel
+from .udt_panel import UdtPanel
 
 
 class MainWindow(QMainWindow):
@@ -31,8 +42,11 @@ class MainWindow(QMainWindow):
         self._tree_model: Optional[TreeModel] = None
         self._tree_view: Optional[QTreeView] = None
         self._search_panel: Optional[SearchPanel] = None
+        self._inspector_panel: Optional[InspectorPanel] = None
+        self._udt_panel: Optional[UdtPanel] = None
+        self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
-        self.resize(900, 650)
+        self.resize(1200, 720)
         self.show_open_project_page()
 
     @property
@@ -50,6 +64,14 @@ class MainWindow(QMainWindow):
     @property
     def search_panel(self) -> Optional[SearchPanel]:
         return self._search_panel
+
+    @property
+    def inspector_panel(self) -> Optional[InspectorPanel]:
+        return self._inspector_panel
+
+    @property
+    def udt_panel(self) -> Optional[UdtPanel]:
+        return self._udt_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -92,6 +114,7 @@ class MainWindow(QMainWindow):
         old_project = self._project
         self._project = project
         self._tree_model = TreeModel(project, self)
+        self._udt_context = ProjectUdtContext(project)
 
         tree = QTreeView(self)
         tree.setModel(self._tree_model)
@@ -99,25 +122,68 @@ class MainWindow(QMainWindow):
         tree.setAlternatingRowColors(True)
         tree.setHeaderHidden(False)
         search_panel = SearchPanel(project, self)
+        inspector_panel = InspectorPanel(self)
+        udt_panel = UdtPanel(self)
+        details_tabs = QTabWidget(self)
+        details_tabs.addTab(inspector_panel, "Inspektor")
+        details_tabs.addTab(udt_panel, "UDT kontekst")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
+        splitter.addWidget(details_tabs)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
-        splitter.setSizes([320, 580])
+        splitter.setStretchFactor(2, 2)
+        splitter.setSizes([280, 420, 500])
 
         self._tree_view = tree
         self._search_panel = search_panel
+        self._inspector_panel = inspector_panel
+        self._udt_panel = udt_panel
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
+        tree.selectionModel().currentChanged.connect(
+            self._tree_selection_changed
+        )
+        search_panel.nodeSelected.connect(self._show_node)
 
         if old_project is not None:
             old_project.close()
         return True
 
+    def _tree_selection_changed(self, current, _previous) -> None:
+        if not current.isValid() or self._tree_model is None:
+            return
+        node_uid = self._tree_model.data(
+            current, self._tree_model.NodeUidRole
+        )
+        if node_uid:
+            self._show_node(node_uid)
+
+    def _show_node(self, node_uid: str) -> None:
+        if (
+            self._project is None
+            or self._udt_context is None
+            or self._inspector_panel is None
+            or self._udt_panel is None
+        ):
+            return
+        try:
+            details = node_details(
+                self._project,
+                node_uid,
+                udt_context=self._udt_context,
+            )
+        except RepositoryError as exc:
+            self.statusBar().showMessage(str(exc), 5000)
+            return
+        self._inspector_panel.set_details(details)
+        self._udt_panel.set_context(details["udt_context"])
+
     def closeEvent(self, event) -> None:
         if self._project is not None:
             self._project.close()
             self._project = None
+            self._udt_context = None
         super().closeEvent(event)

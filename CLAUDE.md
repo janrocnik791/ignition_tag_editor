@@ -188,19 +188,18 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint C3 — read-only paginated search in
-  `editor/repository.py` (`search_nodes`, `get_search_filters`) plus `ui/search_panel.py`
-  with field/mode/provider/site/tag-type controls, total counts, bounded result pages, and
-  previous/next navigation. Schema v2 adds search indexes; v1 projects migrate forward
-  without rewriting baseline rows. Real-data check over 277,607 nodes: representative
-  count + first-page queries ~0.1–0.18 s; full window open with tree + search ~0.11 s.
-  Also done: A, B1, B2, C1, C2.
-- **Active / next:** Checkpoint C4 — tag inspector and effective UDT context synchronized
-  with the selected tree/search node.
+- **Last completed:** Checkpoint C4 — read-only inspector with raw/effective properties,
+  extracted OPC/sourceTagPath/typeId fields and source provenance, plus a site-aware UDT
+  panel with members, parameters, and inheritance. Tree and search selections update both
+  panels. The implementation reuses `analyzer.udt_resolver.UdtRegistry`; no schema change
+  was required. Real-data check over 277,607 nodes: resolver build ~0.059 s, selected-node
+  details ~0.0028 s, full window open ~0.841 s, and C4 writes zero rows. Explorer MVP is
+  complete. Also done: A, B1, B2, C1, C2, C3.
+- **Active / next:** Checkpoint D1 — exact relationship discovery with explicit unresolved
+  and ambiguous states; do not start without separate user approval.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, and the read-only repository (schema v2:
   `project_meta`, `sources`, `baseline_nodes` + C3 search indexes); the test suite passes
-  (126 tests); the GUI remains read-only; no UDT effective resolution (C4),
-  `relationships`, or `operations` yet.
-- **Branch:** C3 implemented on `checkpoint-c3` from merged C2 baseline `origin/main`.
+  (135 tests); the GUI remains read-only; no `relationships` or `operations` yet.
+- **Branch:** C4 implemented on `checkpoint-c4` from the C3 baseline in `origin/main`.
 - **Blocker:** none.

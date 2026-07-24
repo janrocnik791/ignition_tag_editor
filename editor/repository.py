@@ -22,6 +22,7 @@ from .import_service import (  # noqa: F401
     list_providers,
 )
 from .project import Project, ProjectError
+from .udt_context import ProjectUdtContext
 
 
 class RepositoryError(ProjectError):
@@ -307,16 +308,23 @@ def _provider_info(project: Project, source_id: Optional[int]) -> Optional[Dict[
     if source_id is None:
         return None
     row = project.conn.execute(
-        "SELECT provider_name, site, kind FROM sources WHERE id = ?", (source_id,)
+        "SELECT id AS source_id, path, sha256, provider_name, site, kind, "
+        "import_session, imported_at FROM sources WHERE id = ?",
+        (source_id,),
     ).fetchone()
     return dict(row) if row else None
 
 
-def node_details(project: Project, node_uid: str) -> Dict[str, Any]:
+def node_details(
+    project: Project,
+    node_uid: str,
+    udt_context: Optional[ProjectUdtContext] = None,
+) -> Dict[str, Any]:
     """Podrobnosti vozlisca: izlusceni stolpci + surove lastnosti + kontekst.
 
     ``properties`` je celoten originalni Ignition objekt (brez otrok). Neznan uid
-    vrze RepositoryError. Efektivni UDT clani/parametri pridejo v C4.
+    vrze RepositoryError. ``effective_properties`` in ``udt_context`` sta
+    izracunana read-only pogleda; baseline ostane nespremenjen.
     """
     node = get_node(project, node_uid)
     if node is None:
@@ -333,9 +341,13 @@ def node_details(project: Project, node_uid: str) -> Dict[str, Any]:
             parent = {"node_uid": p["node_uid"], "name": p["name"],
                       "path_at_import": p["path_at_import"]}
     cc = child_count(project, node_uid)
+    resolver = udt_context or ProjectUdtContext(project)
+    resolved = resolver.resolve(node_uid)
     return {
         **node,
         "properties": properties,
+        "effective_properties": resolved["effective_properties"],
+        "udt_context": resolved["udt_context"],
         "parent": parent,
         "child_count": cc,
         "has_children": cc > 0,

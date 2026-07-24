@@ -78,3 +78,19 @@ def test_search_panel_pages_without_loading_all_results(qtbot, project):
     assert panel.last_result["offset"] == 1
     assert panel.previous_button.isEnabled()
     assert first_uid != second_uid
+
+
+def test_selecting_result_emits_node_uid(qtbot, project):
+    panel = SearchPanel(project)
+    qtbot.addWidget(panel)
+    panel.query_edit.setText("Motor1_Run")
+    panel.execute_search(reset=True)
+    expected = panel.results_model.data(
+        panel.results_model.index(0, 0),
+        Qt.ItemDataRole.UserRole,
+    )["node_uid"]
+
+    with qtbot.waitSignal(panel.nodeSelected) as signal:
+        panel.results_view.setCurrentIndex(panel.results_model.index(0, 0))
+
+    assert signal.args == [expected]

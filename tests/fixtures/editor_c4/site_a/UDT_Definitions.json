@@ -1,0 +1,48 @@
+{
+  "name": "_types_",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "BaseMotor",
+      "tagType": "UdtType",
+      "parameters": {
+        "Area": {"dataType": "String", "value": "Default"},
+        "SpeedScale": {"dataType": "Float4", "value": 1.0}
+      },
+      "tags": [
+        {
+          "name": "Run",
+          "tagType": "AtomicTag",
+          "dataType": "Boolean",
+          "documentation": "Inherited run state"
+        },
+        {
+          "name": "Speed",
+          "tagType": "AtomicTag",
+          "dataType": "Float4",
+          "documentation": "Base speed"
+        }
+      ]
+    },
+    {
+      "name": "MotorUDT",
+      "tagType": "UdtType",
+      "typeId": "BaseMotor",
+      "parameters": {
+        "SpeedScale": {"dataType": "Float4", "value": 2.0}
+      },
+      "tags": [
+        {
+          "name": "Speed",
+          "tagType": "AtomicTag",
+          "documentation": "Derived speed"
+        },
+        {
+          "name": "Alarm",
+          "tagType": "AtomicTag",
+          "dataType": "Boolean"
+        }
+      ]
+    }
+  ]
+}
