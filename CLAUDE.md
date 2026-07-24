@@ -188,18 +188,19 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint C2 — first PySide6 GUI with an open-project screen,
-  `QTreeView`, and a paginated custom `QAbstractItemModel` over `editor/repository.py`
-  (`ui/`, `tests/test_ui_tree_model.py`, `tests/test_ui_main_window.py`). The Qt layer is
-  isolated from the headless `editor` package; PySide6 and pytest-qt are declared
-  separately as runtime/dev dependencies. Real-data check over 277,607 nodes: six roots
-  initialized in ~534 ms; first-page expansion at most ~13 ms. Also done: A, B1, B2, C1.
-- **Active / next:** Checkpoint C3 — paginated search and filters by field,
-  provider/site/tag type, with result counts and exact/prefix/contains modes.
+- **Last completed:** Checkpoint C3 — read-only paginated search in
+  `editor/repository.py` (`search_nodes`, `get_search_filters`) plus `ui/search_panel.py`
+  with field/mode/provider/site/tag-type controls, total counts, bounded result pages, and
+  previous/next navigation. Schema v2 adds search indexes; v1 projects migrate forward
+  without rewriting baseline rows. Real-data check over 277,607 nodes: representative
+  count + first-page queries ~0.1–0.18 s; full window open with tree + search ~0.11 s.
+  Also done: A, B1, B2, C1, C2.
+- **Active / next:** Checkpoint C4 — tag inspector and effective UDT context synchronized
+  with the selected tree/search node.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
-  provides project lifecycle, baseline import, and the read-only repository (schema v1:
-  `project_meta`, `sources`, `baseline_nodes`); the test suite passes (113 tests); the C2
-  GUI is read-only; no search (C3), UDT effective resolution (C4), `relationships`, or
-  `operations` yet.
-- **Branch:** C2 implemented on `checkpoint-c2` from merged C1 baseline `origin/main`.
+  provides project lifecycle, baseline import, and the read-only repository (schema v2:
+  `project_meta`, `sources`, `baseline_nodes` + C3 search indexes); the test suite passes
+  (126 tests); the GUI remains read-only; no UDT effective resolution (C4),
+  `relationships`, or `operations` yet.
+- **Branch:** C3 implemented on `checkpoint-c3` from merged C2 baseline `origin/main`.
 - **Blocker:** none.

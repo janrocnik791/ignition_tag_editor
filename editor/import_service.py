@@ -230,10 +230,19 @@ def import_source(project: Project, path: str, site: str) -> Dict[str, Any]:
 def list_providers(project: Project) -> List[Dict[str, Any]]:
     """Uvozeni providerji s steviljem vozlisc (osnova za lazy drevo v C1)."""
     rows = project.conn.execute(
-        "SELECT b.provider_uid, s.provider_name, s.site, s.kind, "
-        "COUNT(*) AS node_count "
-        "FROM baseline_nodes b JOIN sources s ON s.id = b.source_id "
-        "GROUP BY b.provider_uid, s.provider_name, s.site, s.kind "
-        "ORDER BY s.site, s.provider_name"
+        "SELECT s.provider_name, s.site, s.kind, "
+        "(SELECT COUNT(*) FROM baseline_nodes b WHERE b.source_id = s.id) "
+        "AS node_count "
+        "FROM sources s "
+        "WHERE EXISTS(SELECT 1 FROM baseline_nodes b WHERE b.source_id = s.id) "
+        "ORDER BY s.site, s.provider_name, s.kind"
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [
+        {
+            "provider_uid": compute_provider_uid(
+                row["site"], row["provider_name"], row["kind"]
+            ),
+            **dict(row),
+        }
+        for row in rows
+    ]

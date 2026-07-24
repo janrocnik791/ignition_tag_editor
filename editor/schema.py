@@ -6,6 +6,7 @@ usmerjene in oznacene z zaporedno verzijo; odpiranje starejsega projekta pozene
 cakajoce migracije. Baseline se s poznejsimi migracijami nikoli ne prepise.
 
 Mejnik B1 ustvari v1 shemo: ``project_meta``, ``sources``, ``baseline_nodes``.
+C3 doda v2 iskalne indekse brez spremembe baseline vrstic.
 Tabeli ``relationships`` (mejnik D1) in ``operations`` (mejnik F1) dodata svoji
 migraciji pozneje -- tu jih namerno se ne ustvarimo (brez scaffoldinga za kasnejse
 mejnike).
@@ -17,7 +18,7 @@ import sqlite3
 from typing import Callable, List, Tuple
 
 # Trenutna ciljna verzija sheme.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Identifikator aplikacije, shranjen v project_meta (locevanje tujih .sqlite).
 APP_ID = "ignition_tag_editor"
@@ -83,9 +84,45 @@ def _migration_v1(conn: sqlite3.Connection) -> None:
     conn.executescript(_V1_SQL)
 
 
+# ---- v2: C3 iskalni indeksi ---------------------------------------------
+
+_V2_SQL = """
+CREATE INDEX idx_baseline_search_path
+    ON baseline_nodes(
+        path_at_import, provider_uid, node_uid, source_id, tag_type
+    );
+CREATE INDEX idx_baseline_search_name
+    ON baseline_nodes(name, provider_uid, node_uid, source_id, tag_type)
+    WHERE name IS NOT NULL;
+CREATE INDEX idx_baseline_search_opc_item
+    ON baseline_nodes(
+        opc_item_path, provider_uid, node_uid, source_id, tag_type
+    )
+    WHERE opc_item_path IS NOT NULL;
+CREATE INDEX idx_baseline_search_source_tag
+    ON baseline_nodes(
+        source_tag_path, provider_uid, node_uid, source_id, tag_type
+    )
+    WHERE source_tag_path IS NOT NULL;
+CREATE INDEX idx_baseline_search_type_id
+    ON baseline_nodes(type_id, provider_uid, node_uid, source_id, tag_type)
+    WHERE type_id IS NOT NULL;
+CREATE INDEX idx_baseline_search_tag_type
+    ON baseline_nodes(tag_type, provider_uid, node_uid, source_id)
+    WHERE tag_type IS NOT NULL;
+CREATE INDEX idx_baseline_search_source
+    ON baseline_nodes(source_id) WHERE source_id IS NOT NULL;
+"""
+
+
+def _migration_v2(conn: sqlite3.Connection) -> None:
+    conn.executescript(_V2_SQL)
+
+
 # Urejen seznam (verzija, funkcija). Dodaj nove migracije na konec.
 MIGRATIONS: List[Tuple[int, Callable[[sqlite3.Connection], None]]] = [
     (1, _migration_v1),
+    (2, _migration_v2),
 ]
 
 

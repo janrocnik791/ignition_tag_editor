@@ -26,7 +26,10 @@ from .project import (  # noqa: F401
     recover,
 )
 from .repository import (  # noqa: F401
+    MAX_SEARCH_PAGE_SIZE,
     RepositoryError,
+    SEARCH_FIELDS,
+    SEARCH_MODES,
     breadcrumbs,
     child_count,
     full_path,
@@ -34,6 +37,8 @@ from .repository import (  # noqa: F401
     get_node,
     get_parent,
     get_provider_root,
+    get_search_filters,
     node_details,
+    search_nodes,
 )
 from .schema import SCHEMA_VERSION  # noqa: F401
