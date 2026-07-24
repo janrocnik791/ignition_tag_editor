@@ -197,19 +197,19 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint E2 — the synchronized `Ročne povezave` page provides
-  explicit candidate search/selection, direction and role controls, required audit actor,
-  optional note, and create/confirm/reject/logical-remove actions over E1 services.
-  Unresolved relationships require an explicit candidate; successful writes refresh the
-  read-only chain, whose evidence view includes validity, effective state, and audit
-  fields. Decisions persist across project reopen. Also done: A, B1, B2, C1, C2, C3,
-  C4, D1, D2, E1; Explorer MVP remains complete.
-- **Active / next:** Checkpoint F1 — operation model and services.
+- **Last completed:** Checkpoint F1 — schema v4 adds the persistent ordered `operations`
+  journal. Services validate, order, apply in-memory, and invert all planned CREATE,
+  rename, move, property, source-path, and UDT-parameter operations; `DELETE_TAG` is
+  persisted as `DEFERRED`. Dependency and conflict states are explicit, specialized
+  updates cannot bypass their validators, and writes never mutate baseline rows. On a
+  277,607-node project, targeted operation validation/persistence is ~0.0027 s. Also
+  done: A, B1, B2, C1, C2, C3, C4, D1, D2, E1, E2; Explorer MVP remains complete.
+- **Active / next:** Checkpoint F2 — staged changes panel and operation editor.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
-  discovery (schema v3: `project_meta`, `sources`, `baseline_nodes`, `relationships`);
-  the test suite passes (168 tests); the GUI can inspect and manually curate relationships
-  but has no `operations` model yet.
-- **Branch:** E2 implemented on `checkpoint-e2` from the merged E1 baseline in
+  discovery and staged operation services (schema v4: `project_meta`, `sources`,
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (187 tests);
+  the GUI can inspect and manually curate relationships but does not yet expose operations.
+- **Branch:** F1 implemented on `checkpoint-f1` from the merged E2 baseline in
   `origin/main`.
 - **Blocker:** none.

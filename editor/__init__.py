@@ -25,6 +25,22 @@ from .project import (  # noqa: F401
     open_project,
     recover,
 )
+from .operations import (  # noqa: F401
+    CREATE_OPERATION_TYPES,
+    OPERATION_STATUSES,
+    OPERATION_TYPES,
+    OperationError,
+    apply_operation_to_state,
+    build_simulation_state,
+    create_operation,
+    get_operation,
+    invert_operation,
+    list_operations,
+    load_baseline_state,
+    ordered_operations,
+    reorder_operation,
+    validate_operation,
+)
 from .relationships import (  # noqa: F401
     EVIDENCE_TYPES,
     ORIGINS,

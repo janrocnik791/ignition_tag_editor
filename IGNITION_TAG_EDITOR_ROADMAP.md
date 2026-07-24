@@ -429,6 +429,16 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Datoteke:** `ui/manual_link_editor.py`, testi. **Meja commit-a:** en commit.
 
 ### F1. Model in storitve operacij
+- **Status:** zaključeno. Schema v4 doda trajni, auditirani in urejeni dnevnik
+  `operations`. `editor/operations.py` validira in in-memory uporablja `CREATE_TAG`,
+  `CREATE_FOLDER`, `CREATE_UDT_INSTANCE`, `RENAME_TAG`, `MOVE_TAG`,
+  `UPDATE_PROPERTY`, `UPDATE_SOURCE_PATH` in `UPDATE_PARAMETERS`; za vsak izvedljiv
+  tip sestavi inverz. `DELETE_TAG` se shrani kot jasno `DEFERRED` in se ne uporabi.
+  Odvisnosti se topološko uredijo, nove tarče samodejno dobijo CREATE odvisnost,
+  nasprotujoče spremembe istega polja so `CONFLICT`. Interaktivna validacija naloži le
+  relevanten overlay; na kopiji realnega projekta z 277.607 vozlišči je trajni rename
+  ~0,0027 s (prej polna materializacija ~9,6 s), baseline ostane nespremenjen. Celotna
+  zbirka: 187 zelenih testov.
 - **Cilj:** `CREATE_*`/`RENAME`/`MOVE`/`UPDATE_PROPERTY`/`UPDATE_SOURCE_PATH`/
   `UPDATE_PARAMETERS` (+ `DELETE` modeliran, odložen); validate/order/apply-in-sim/invert.
   **Odvisnosti:** B2 (identiteta), C1. **Ponovna uporaba:** `udt_resolver.braces_balanced`,
@@ -605,12 +615,12 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**F1 – Model in storitve operacij.** Dodaj migracijo za tabelo `operations` ter
-`editor/operations.py` za validacijo, urejanje vrstnega reda, uporabo v simulaciji in
-inverz operacij `CREATE_*`, `RENAME`, `MOVE`, `UPDATE_PROPERTY`,
-`UPDATE_SOURCE_PATH` in `UPDATE_PARAMETERS`. `DELETE` ostane modeliran, vendar izvedba
-ostane odložena. Baseline mora ostati nespremenjen. (B1, B2, C1–C4, D1–D2 in E1–E2
-so zaključeni.)
+**F2 – Panel stage-anih sprememb in urejevalnik operacij.** Dodaj
+`ui/staged_changes_panel.py` ter `ui/operation_editor.py`. Uporabnik mora iz izbranega
+baseline vozlišča ustvariti validirano F1 operacijo, pregledati njen payload/original,
+videti `VALID`/`CONFLICT`/`DEFERRED` stanje in urediti dovoljeni vrstni red. Baseline in
+simulirani pogled morata ostati jasno ločena. (B1, B2, C1–C4, D1–D2, E1–E2 in F1 so
+zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
