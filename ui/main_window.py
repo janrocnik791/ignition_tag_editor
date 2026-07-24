@@ -31,6 +31,7 @@ from editor import (
 
 from .inspector_panel import InspectorPanel
 from .diff_panel import DiffPanel
+from .export_panel import ExportPanel
 from .manual_link_editor import ManualLinkEditor
 from .models.tree_model import TreeModel
 from .operation_editor import OperationEditor
@@ -58,6 +59,7 @@ class MainWindow(QMainWindow):
         self._sim_tree_view: Optional[SimTreeView] = None
         self._diff_panel: Optional[DiffPanel] = None
         self._validation_panel: Optional[ValidationPanel] = None
+        self._export_panel: Optional[ExportPanel] = None
         self._udt_context: Optional[ProjectUdtContext] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(1200, 720)
@@ -114,6 +116,10 @@ class MainWindow(QMainWindow):
     @property
     def validation_panel(self) -> Optional[ValidationPanel]:
         return self._validation_panel
+
+    @property
+    def export_panel(self) -> Optional[ExportPanel]:
+        return self._export_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -178,6 +184,7 @@ class MainWindow(QMainWindow):
         sim_tree_view = SimTreeView(project, self)
         diff_panel = DiffPanel(project, self)
         validation_panel = ValidationPanel(project, self)
+        export_panel = ExportPanel(project, self)
         simulation_tabs = QTabWidget(self)
         simulation_tabs.addTab(sim_tree_view, "Simulirano drevo")
         simulation_tabs.addTab(diff_panel, "Diff")
@@ -189,6 +196,7 @@ class MainWindow(QMainWindow):
         details_tabs.addTab(manual_link_editor, "Ročne povezave")
         details_tabs.addTab(operation_workspace, "Stage-ane spremembe")
         details_tabs.addTab(simulation_tabs, "Simulacija")
+        details_tabs.addTab(export_panel, "Izvoz")
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(tree)
         splitter.addWidget(search_panel)
@@ -209,6 +217,7 @@ class MainWindow(QMainWindow):
         self._sim_tree_view = sim_tree_view
         self._diff_panel = diff_panel
         self._validation_panel = validation_panel
+        self._export_panel = export_panel
         self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
@@ -251,6 +260,7 @@ class MainWindow(QMainWindow):
             or self._relationship_panel is None
             or self._manual_link_editor is None
             or self._operation_editor is None
+            or self._export_panel is None
         ):
             return
         try:
@@ -276,6 +286,10 @@ class MainWindow(QMainWindow):
             node_uid,
             details.get("path_at_import"),
         )
+        self._export_panel.set_node(
+            node_uid,
+            details.get("path_at_import"),
+        )
 
     def _refresh_simulation_views(
         self,
@@ -289,6 +303,14 @@ class MainWindow(QMainWindow):
             self._diff_panel.refresh()
         if self._validation_panel is not None:
             self._validation_panel.refresh()
+        if (
+            self._export_panel is not None
+            and self._export_panel.node_uid is not None
+        ):
+            self._export_panel.set_node(
+                self._export_panel.node_uid,
+                self._export_panel.selection_label.text(),
+            )
 
     def _refresh_relationship_views(self) -> None:
         if (

@@ -22,6 +22,7 @@ from .export import (  # noqa: F401
     canonical_export_bytes,
     compute_export_scope,
     serialize_ignition_json,
+    verify_round_trip,
     write_package,
 )
 from .project import (  # noqa: F401

@@ -514,6 +514,11 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   commit-a:** en commit.
 
 ### H2. Round-trip preverjanje + izvozni UI  → **Prvi celoten navpični rez**
+- **Status:** zaključeno. `verify_round_trip` izvoženi JSON ponovno uvozi v začasni
+  sveži projekt in semantično primerja vsako vozlišče, vrstni red in lastnosti.
+  UI stran `Izvoz` pokaže scope, izbere ciljno mapo in paket zapiše le po rezultatu
+  `EXPORT_VERIFIED`. Prvi celoten navpični rez je zaključen. Celotna zbirka:
+  219 zelenih testov.
 - **Cilj:** ponovni uvoz izvoza v parser in primerjava z načrtovanim sim poddrevesom →
   `EXPORT_VERIFIED`. **Odvisnosti:** H1. **Datoteke:** razširi `export.py`,
   `ui/export_panel.py`, testi. **Testi:** round-trip vozlišče-za-vozlišče (brez naših
@@ -647,9 +652,9 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**H2 – Export UI in round-trip.** Dodaj izbiro simulirane veje/ciljne mape, predogled
-obsega in opozoril ter zapis H1 paketa. Nato uvozi ustvarjeni `tags.json` v svež projekt
-in deterministično primerjaj vozlišča. (A–G in H1 so zaključeni.)
+**I – Prva ročno dokončana linija.** Uporabi celoten vertikalni rez na eni
+sintetizirani, nezaupni reprezentativni liniji ter rezultat shrani kot golden vedenjsko
+specifikacijo in regresijski test. Ne commit-aj realnih Calcit podatkov. (A–H zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
