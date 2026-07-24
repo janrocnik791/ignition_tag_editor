@@ -1,6 +1,6 @@
-# Ignition Tag Editor — Claude Code operating manual
+# Ignition Tag Editor — Codex operating manual
 
-This file is the permanent operating manual for every Claude Code session in this
+This file is the permanent operating manual for every Codex session in this
 repository. Read it in full at the start of a task. It defines the rules and working
 protocol; it does not repeat the product design, which lives in the roadmap.
 
@@ -16,11 +16,14 @@ Authority, in order:
 
 1. **`main`** is the authoritative stable baseline. Start every task from an
    up-to-date `main`.
-2. **`CLAUDE.md`** (this file) defines permanent repository rules and the working
+2. **`AGENT.md`** (this file) defines permanent Codex repository rules and the working
    protocol.
 3. **`IGNITION_TAG_EDITOR_ROADMAP.md`** is the authoritative product architecture,
    implementation sequence, checkpoint scope, and acceptance criteria. Do **not**
    duplicate the roadmap here; reference it by section/checkpoint.
+4. **`CLAUDE.md`** is the separate Claude-specific operating manual. It is not this
+   file and does not override Codex instructions. Keep shared project invariants and the
+   mutable checkpoint status synchronized between the two manuals.
 
 For an individual task, resolve questions in this order: the current user instruction
 and the plan approved in the session → the actual repository, tests, schemas, and input
@@ -77,11 +80,14 @@ roadmap and codebase relevant to the current task.
 
 ## 4. Roadmap execution protocol
 
-Work **checkpoint by checkpoint**; the roadmap (checkpoints A–L) defines scope. Plan Mode
-is the default entry point for an implementation task: make no changes, inspect the repo
-and relevant tests/schemas/fixtures (and a bounded sample of real data), reuse existing
+Work **checkpoint by checkpoint**; the roadmap (checkpoints A–L) defines scope. Start an
+implementation task with a read-only planning pass: make no changes, inspect the repo and
+relevant tests/schemas/fixtures (and a bounded sample of real data), reuse existing
 components, resolve unknowns from evidence, and produce one concrete plan for exactly the
-active checkpoint, separating confirmed facts from assumptions.
+active checkpoint, separating confirmed facts from assumptions. Use Codex Plan mode when
+the runtime makes it available and active; otherwise perform the same inspection in the
+active collaboration mode. This repository file never overrides the runtime's mode or
+permission instructions.
 
 For each implementation request:
 
@@ -96,7 +102,7 @@ For each implementation request:
 8. Inspect the final diff for correctness, scope creep, unrelated changes, generated
    files, secrets, and confidential data.
 9. Update the roadmap checkpoint status and the mutable **Current checkpoint** section
-   (§9) below.
+   (§9) below; mirror the shared checkpoint status in `CLAUDE.md`.
 10. Create meaningful commits for coherent completed work and push the working branch
     (see §7).
 11. Report: completed checkpoint; delivered user-visible and architectural result; key
@@ -158,9 +164,12 @@ When stopping, explain the evidence, recommend one default, and describe its con
 - Implement a checkpoint on a focused branch; keep `main` stable. Never force-push and
   never rewrite shared history — if a destructive or history-rewriting operation seems
   necessary, stop and ask (§5).
-- Create one meaningful commit per coherent completed unit of work. End each commit
-  message with the trailer:
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+- Create one meaningful commit per coherent completed unit of work. For Codex-authored
+  work, end each commit message with the truthful trailer:
+  `Co-Authored-By: OpenAI Codex <noreply@openai.com>`.
+  Never attribute Codex work to Claude or another agent identity.
+  This Codex-specific identity rule supersedes Claude-named trailer examples in the
+  roadmap or `CLAUDE.md`; all other Git workflow requirements remain in force.
 - Push the current working branch to origin. Report the commit hash, branch, and test
   results.
 - Do not commit unrelated changes, and do not mark a checkpoint complete until its

@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSplitter,
     QTreeView,
     QVBoxLayout,
     QWidget,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
 from editor import Project, ProjectError, ProjectSchemaError, open_project
 
 from .models.tree_model import TreeModel
+from .search_panel import SearchPanel
 
 
 class MainWindow(QMainWindow):
@@ -27,6 +29,8 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self._project: Optional[Project] = None
         self._tree_model: Optional[TreeModel] = None
+        self._tree_view: Optional[QTreeView] = None
+        self._search_panel: Optional[SearchPanel] = None
         self.setWindowTitle("Ignition Tag Editor")
         self.resize(900, 650)
         self.show_open_project_page()
@@ -38,6 +42,14 @@ class MainWindow(QMainWindow):
     @property
     def tree_model(self) -> Optional[TreeModel]:
         return self._tree_model
+
+    @property
+    def tree_view(self) -> Optional[QTreeView]:
+        return self._tree_view
+
+    @property
+    def search_panel(self) -> Optional[SearchPanel]:
+        return self._search_panel
 
     def show_open_project_page(self) -> None:
         page = QWidget(self)
@@ -86,7 +98,17 @@ class MainWindow(QMainWindow):
         tree.setUniformRowHeights(True)
         tree.setAlternatingRowColors(True)
         tree.setHeaderHidden(False)
-        self.setCentralWidget(tree)
+        search_panel = SearchPanel(project, self)
+        splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        splitter.addWidget(tree)
+        splitter.addWidget(search_panel)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 2)
+        splitter.setSizes([320, 580])
+
+        self._tree_view = tree
+        self._search_panel = search_panel
+        self.setCentralWidget(splitter)
         self.setWindowTitle(f"{project.name} — Ignition Tag Editor")
         self.statusBar().showMessage(os.path.abspath(project.db_path))
 

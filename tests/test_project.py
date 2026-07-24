@@ -33,13 +33,13 @@ def _tables(db_path: str) -> set:
 
 # ---- ustvarjanje ---------------------------------------------------------
 
-def test_create_project_builds_v1_schema(tmp_path):
+def test_create_project_builds_current_schema(tmp_path):
     p = create_project(str(tmp_path / "proj"), name="Test projekt")
     try:
         assert os.path.exists(p.db_path)
         assert p.name == "Test projekt"
         assert p.project_uid  # dodeljen
-        assert p.schema_version == SCHEMA_VERSION == 1
+        assert p.schema_version == SCHEMA_VERSION == 2
     finally:
         p.close()
 
@@ -51,7 +51,7 @@ def test_create_project_builds_v1_schema(tmp_path):
 
     conn = sqlite3.connect(p.db_path)
     try:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM sources").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM baseline_nodes").fetchone()[0] == 0
         appid = conn.execute("SELECT app_id FROM project_meta WHERE id=1").fetchone()[0]
@@ -92,7 +92,7 @@ def test_reopen_preserves_metadata(tmp_path):
         assert p2.name == "Trajni"
         assert p2.project_uid == uid
         assert p2.meta["created_at"] == created
-        assert p2.schema_version == 1
+        assert p2.schema_version == SCHEMA_VERSION
     finally:
         p2.close()
 
@@ -141,8 +141,8 @@ def test_migrate_is_idempotent(tmp_path):
     # ponovni open ne sme premakniti verzije ali vreci
     p = open_project(d)
     try:
-        assert p.schema_version == 1
-        assert migrate(p.conn) == 1  # ponovni zagon migrate je no-op
+        assert p.schema_version == SCHEMA_VERSION
+        assert migrate(p.conn) == SCHEMA_VERSION  # ponovni zagon migrate je no-op
     finally:
         p.close()
 
@@ -159,6 +159,46 @@ def test_schema_newer_than_supported_raises(tmp_path):
     conn.close()
     with pytest.raises(ProjectSchemaError):
         open_project(d)
+
+
+def test_v1_project_migrates_to_v2_search_indexes(tmp_path):
+    d = str(tmp_path / "proj")
+    p = create_project(d, name="Starejsi")
+    db = p.db_path
+    p.close()
+
+    conn = sqlite3.connect(db)
+    search_indexes = [
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='index' AND name LIKE 'idx_baseline_search_%'"
+        ).fetchall()
+    ]
+    for index_name in search_indexes:
+        conn.execute(f'DROP INDEX "{index_name}"')
+    conn.execute("PRAGMA user_version = 1")
+    conn.execute("UPDATE project_meta SET schema_version = 1 WHERE id = 1")
+    conn.commit()
+    conn.close()
+
+    migrated = open_project(d)
+    try:
+        assert migrated.schema_version == 2
+        indexes = {
+            row[0]
+            for row in migrated.conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='index' AND name LIKE 'idx_baseline_search_%'"
+            ).fetchall()
+        }
+        assert {
+            "idx_baseline_search_path",
+            "idx_baseline_search_name",
+            "idx_baseline_search_tag_type",
+        } <= indexes
+    finally:
+        migrated.close()
 
 
 # ---- obnovitev -----------------------------------------------------------
@@ -179,7 +219,7 @@ def test_recover_after_interrupted_session(tmp_path):
     rec = recover(d)
     try:
         assert rec.name == "Original"  # zadnje potrjeno stanje ostane
-        assert rec.schema_version == 1
+        assert rec.schema_version == SCHEMA_VERSION
     finally:
         rec.close()
 

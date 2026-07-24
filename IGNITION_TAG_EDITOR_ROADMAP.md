@@ -333,6 +333,15 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   en commit. **Ročno:** odpri projekt, razširi globoko vejo.
 
 ### C3. Iskanje in filtri
+- **Status:** zaključeno. `editor/repository.py` vsebuje `search_nodes` in
+  `get_search_filters`: polja `fullPath`/`name`/`opcItemPath`/`sourceTagPath`/`typeId`,
+  načini exact/prefix/contains, presečni filtri provider/site/tag_type, determinističen
+  `limit`/`offset`, skupno štetje ter največ 500 lahkih vrstic brez `raw_json`.
+  `ui/search_panel.py` doda kontrole, tabelo rezultatov in prejšnja/naslednja; glavno okno
+  ga prikaže ob lazy drevesu. Schema v2 doda verzionirane iskalne indekse in testirano
+  migracijo iz v1 brez spremembe baseline vrstic. Celotna zbirka: 126 zelenih testov.
+  Realni projekt (277.607 vozlišč): reprezentativni count + prva stran ~0,1–0,18 s,
+  možnosti filtrov ~0,11 s, odprtje okna z drevesom + search panelom ~0,11 s.
 - **Cilj:** iskanje po polju + provider/site/tag_type + štetja. **Odvisnosti:** C2.
 - **Ponovna uporaba:** `query.search`, `SEARCH_FIELDS`.
 - **Datoteke:** `ui/search_panel.py`, razširi `editor/repository.py`, testi.
@@ -480,6 +489,8 @@ Modul · vhod → izhod · meja trajnosti.
   `relationships`/`operations`).
 - **B2:** napolni `baseline_nodes` (+ `node_uid`, `provider_uid`, `sibling_index`,
   `raw_json`).
+- **C3 / v2:** read-only iskalni indeksi nad baseline polji, `source_id` in `tag_type`;
+  baseline vrstice ostanejo nespremenjene.
 - **D1:** `relationships`. **F1:** `operations`. **G2:** undo kazalec v `project_meta`.
 
 Vsaka migracija je naprej-usmerjena, verzionirana, testirana; odpiranje starejšega
@@ -551,10 +562,11 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**C3 – Iskanje in filtri.** Razširi read-only repozitorij ter UI z iskanjem po izbranem
-polju, filtri provider/site/tag_type, skupnim številom zadetkov in paginirano prvo stranjo.
-Podprti načini so exact/prefix/contains; cilj za count + prvo stran na 277k vozliščih je
-< ~500 ms. Izvede se **šele po ločeni instrukciji**. (B1, B2, C1 in C2 so zaključeni.)
+**C4 – Tag inspektor + UDT kontekst.** Za izbrano vozlišče prikaži raw in efektivne
+lastnosti, OPC/sourceTagPath/typeId/parametre/provenance ter efektivne UDT člane,
+parametre in dedovanje prek obstoječega `analyzer/udt_resolver.py`. Izbor v drevesu in
+rezultatih iskanja mora sinhronizirati inspektor. Izvede se **šele po ločeni instrukciji**.
+(B1, B2 in C1–C3 so zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 

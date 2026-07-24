@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
-from PySide6.QtWidgets import QPushButton, QTreeView
+from PySide6.QtWidgets import QPushButton, QSplitter, QTreeView
 
 from editor import create_project, import_source
 from ui.main_window import MainWindow
@@ -43,5 +43,7 @@ def test_open_project_shows_lazy_tree(qtbot, project_path):
     assert window.project.name == "Okenski test"
     assert window.tree_model is not None
     assert window.tree_model.rowCount() == 1
-    assert isinstance(window.centralWidget(), QTreeView)
+    assert isinstance(window.centralWidget(), QSplitter)
+    assert isinstance(window.tree_view, QTreeView)
+    assert window.search_panel is not None
     assert "Okenski test" in window.windowTitle()
