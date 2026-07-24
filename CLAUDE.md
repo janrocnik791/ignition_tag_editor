@@ -188,15 +188,15 @@ only to their designated generated locations.
 Mutable status only. Durable history lives in Git and the roadmap — do not turn this into
 a changelog.
 
-- **Last completed:** Checkpoint I — the committed non-confidential synthetic golden
-  line verifies import, exact/manual relationships, operations, diff, limited export,
-  and semantic round-trip end to end.
-- **Active / next:** Checkpoint J — optional reference-data suggestions.
+- **Last completed:** Checkpoint J — optional `analyzer/reference` context writes
+  provenance-rich, never-auto-approved `SUGGESTION` rows into the relationship model.
+- **Active / next:** Checkpoint K — deterministic grouping/mapping proposals followed
+  by bounded approximate matching.
 - **Prerequisite state:** `main` is the authoritative baseline; the `editor/` package
   provides project lifecycle, baseline import, read-only exploration, and exact relation
   discovery and staged operation services (schema v4: `project_meta`, `sources`,
-  `baseline_nodes`, `relationships`, `operations`); the test suite passes (220 tests);
+  `baseline_nodes`, `relationships`, `operations`); the test suite passes (223 tests);
   the GUI exposes the full Editor MVP including simulation/diff/validation.
-- **Branch:** I implemented on `checkpoint-i` from the merged H2 baseline in
+- **Branch:** J implemented on `checkpoint-j` from the merged I baseline in
   `origin/main`.
 - **Blocker:** none.

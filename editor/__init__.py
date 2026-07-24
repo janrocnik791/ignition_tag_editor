@@ -56,9 +56,11 @@ from .operations import (  # noqa: F401
 )
 from .relationships import (  # noqa: F401
     EVIDENCE_TYPES,
+    QUERY_EVIDENCE_TYPES,
     ORIGINS,
     RELATIONSHIP_ROLES,
     RELATIONSHIP_STATES,
+    SUGGESTION_EVIDENCE_TYPES,
     RelationshipError,
     confirm_relationship,
     create_manual_relationship,
@@ -68,6 +70,12 @@ from .relationships import (  # noqa: F401
     reject_relationship,
     relationship_validity,
     remove_manual_relationship,
+)
+from .reference_context import (  # noqa: F401
+    REFERENCE_EVIDENCE_TYPE,
+    ReferenceContextError,
+    apply_reference_index,
+    import_reference_context,
 )
 from .repository import (  # noqa: F401
     MAX_SEARCH_PAGE_SIZE,

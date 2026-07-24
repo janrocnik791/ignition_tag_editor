@@ -534,6 +534,11 @@ mejnike (I–L) je opis lažji in se pred izvedbo ponovno načrtuje.
   **Ne-cilji:** avtomatika. **Meja commit-a:** golden fixtures + test.
 
 ### J. Integracija referenčnih podatkov
+- **Status:** zaključeno. `editor/reference_context.py` ponovno uporabi nespremenjeni
+  `analyzer/reference` uvoznik in read-only indeks. Referenčne člane in eksplicitne
+  old/new zapise pripne na projekt kot sledljive `SUGGESTION` relacije z izvorom in SHA;
+  ostanejo `UNRESOLVED`/`AMBIGUOUS`, ročna potrditev pa ustvari ločeno auditno vrstico.
+  Kontekst je povsem neobvezen. Celotna zbirka: 223 zelenih testov.
 - **Cilj:** obstoječi `analyzer/reference` priključi kot neobvezen kontekst; piše
   **`SUGGESTION`** vrstice v model relacij (nikoli samodejno odobreno). **Odvisnosti:** I.
   **Ponovna uporaba:** celoten `analyzer/reference`.
@@ -656,9 +661,9 @@ cloud.
 
 ## 24. Takojšnji naslednji implementacijski mejnik
 
-**J – Integracija referenčnih podatkov.** Obstoječi `analyzer/reference` priključi kot
-neobvezen kontekst, ki ustvarja sledljive `SUGGESTION` relacije in jih nikoli samodejno ne
-odobri. (A–I zaključeni.)
+**K – Samodejno grupiranje in mapiranje.** Nad golden datasetom najprej uvedi
+deterministične predloge, nato omejeno približno ujemanje. Noben predlog se ne sme
+samodejno potrditi. (A–J zaključeni.)
 
 ## 25. Kontrolni seznam po mejnikih za Claude Code
 
